@@ -1,0 +1,5 @@
+# arrival_time_in_each_period rt_task_number length_per_task resource_type
+600 10 600 1
+1200 20 120 1
+1800 30 60 1
+3600 20 600 1

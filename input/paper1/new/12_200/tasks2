@@ -1,0 +1,4 @@
+# SensorID: rate, sensorID: rate, ...
+0:1,1:2
+# Id time num_sub sensor input output compute delay
+0 27.855441 32 1 1 1 3200 200

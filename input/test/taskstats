@@ -1,0 +1,6 @@
+# time_in_a_period(s) rt_task_number length_per_task resource_type
+600 1 80 1
+1200 2 100 1
+1900 1 200 1
+2400 3 100 1
+3600 1 200 1

@@ -1,0 +1,3 @@
+package jingqin;
+
+@license(LGPL);
