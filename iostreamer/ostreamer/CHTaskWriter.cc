@@ -9,6 +9,7 @@
 
 CHTaskWriter::CHTaskWriter(const string & filename) {
     outputfile = new Outputfile(filename);
+    outputfile->writeLine("#ID arrival_time finish_time execution_time sensor_id");
 }
 
 bool CHTaskWriter::writeTask(ITask * task) {

@@ -37,6 +37,7 @@ public:
     virtual double getRemainingCost() = 0;
     virtual double getMaxDelay() = 0;
     virtual double getRemainingTimeBeforeDeadline() = 0;
+    virtual double getDeadline() = 0;
     virtual ITask * getFatherTask() = 0;
     virtual int getServerId() = 0;
     virtual void setServerId(int id) = 0;

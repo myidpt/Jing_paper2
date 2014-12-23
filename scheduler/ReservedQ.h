@@ -14,7 +14,7 @@
 #include <math.h>
 #include <omnetpp.h>
 #include "General.h"
-#include "scheduler/realtimestats/RTNodes.h"
+#include "scheduler/realtimestats/RTReservation.h"
 #include "scheduler/IQueue.h"
 #include "status/IStatus.h"
 #include "task/ITask.h"
@@ -29,7 +29,7 @@ protected:
     int numSensors;
     IStatus * CMStatus[MAX_CM];
     double averageWorkloads[MAX_SENSORS];
-    RTNodes * rtNodes;
+    RTReservation * rtReserv;
     double dischargeRate;
 
     double restEnergy;

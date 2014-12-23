@@ -10,7 +10,7 @@
 Inputfile::Inputfile(const string & filename) {
     stream = new ifstream();
     stream->open(filename.c_str());
-    cout << "Open task file for input: " << filename << endl;
+    cout << "Open file for input: " << filename << endl;
     if (stream->fail())
     {
         cerr << "Cannot open file " << filename << endl;

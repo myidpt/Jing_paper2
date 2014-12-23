@@ -6,6 +6,8 @@
 
 Define_Module(CH);
 
+#define NOW SIMTIME_DBL(simTime())
+
 void CH::initialize()
 {
     numCMs = par("numCM").longValue();
@@ -21,11 +23,11 @@ void CH::initialize()
         CMStatus[i] = NULL;
     }
 
-    string taskifilename = par("CH_task_input_filename").stdstringValue();
+    string nrttaskifilename = par("CH_task_input_filename").stdstringValue();
     string taskofilename = par("CH_task_output_filename").stdstringValue();
     string statusifilename = par("CM_status_input_filename").stdstringValue();
     string statusofilename = par("CM_status_output_filename").stdstringValue();
-    string rtstatsfilename = par("CH_rt_task_stats").stdstringValue();
+    string rttaskifilename = par("CH_rt_task_stats").stdstringValue();
     double period = par("period").doubleValue();
     double chargeRate = par("chargeRate").doubleValue();
     double maxPower = par("maxPower").doubleValue();
@@ -34,10 +36,10 @@ void CH::initialize()
     // Init taskFactory.
     if (!algorithmName.compare("Reserved")) {
         taskFactory = new TaskFactory(
-                taskifilename, rtstatsfilename, ITask::SimpleTaskType, period);
+                nrttaskifilename, rttaskifilename, ITask::SimpleTaskType, period);
     }
     else {
-        taskFactory = new TaskFactory(taskifilename, ITask::SimpleTaskType);
+        taskFactory = new TaskFactory(nrttaskifilename, ITask::SimpleTaskType);
     }
 
     // Init the average workloads record.
@@ -72,7 +74,7 @@ void CH::initialize()
         queue = new ReservedQ(numCMs, numSensors, period, chargeRate);
         queue->setAverageWorkloads(averageWorkloads);
         queue->setCMStatus(CMStatus);
-        queue->readTaskStats(rtstatsfilename.c_str());
+        queue->readTaskStats(rttaskifilename.c_str());
     }
 
     // Init writers.
@@ -112,7 +114,7 @@ void CH::handleMessage(cMessage *msg)
 
 void CH::distributeInitialStatus() {
     IStatus * status;
-    cout << "CH: distributing status to CMs." << endl;
+    cout << NOW << " CH: distributing status to CMs." << endl;
     while ((status = statusFactory->createStatus()) != NULL) {
         cPacket * packet = new cPacket("InitialStatus", STATUS);
         CMStatus[status->getId()] = status; // Record this status locally.
@@ -130,16 +132,16 @@ void CH::distributeInitialStatus() {
     }
 }
 
-// Read the tasks from the file, and put them into the queue.
+// Read the RT or NRT tasks from taskFactory, and put them into the queue.
 void CH::getNextTask() {
     ITask * task = taskFactory->createTask();
     if(task == NULL) {
-        cout << "CH: All trace read." << endl;
+        cout << "CH: All traces read." << endl;
         allTraceRead = true;
         return;
     }
 
-    if (SIMTIME_DBL(simTime()) >= task->getArrivalTime()) {
+    if (NOW >= task->getArrivalTime()) {
         queue->newArrival(task);
         processTasks();
         getNextTask();
@@ -159,8 +161,7 @@ void CH::getNextTask() {
 }
 
 void CH::addWaitingTask() {
-    cMsgPar par = selfNextTaskTimer->par(TASK_PAR);
-    ITask * task = (ITask *)(par.pointerValue());
+    ITask * task = (ITask *)(selfNextTaskTimer->par(TASK_PAR).pointerValue());
     queue->newArrival(task);
 }
 
@@ -177,7 +178,7 @@ void CH::processTasks() {
         packet->addPar(par);
         packet->setBitLength(subtask->getInputData() * MB_TO_BIT);
         sendSafe(subtask->getServerId(), packet);
-        cout << "CH: assign task id = " << subtask->getId()
+        cout << NOW << " CH: assign task id = " << subtask->getId()
              << " to CM#" << subtask->getServerId() << endl;
     }
 }
@@ -192,7 +193,7 @@ void CH::processFinishedTasks(cPacket * packet) {
         return;
     }
 
-    cout << "CH: finished task id = " << task->getId()
+    cout << NOW << " CH: finished task id = " << task->getId()
          << " from CM#" << task->getServerId() << endl;
 
     if (queue->finishedTask(task)) {
@@ -209,7 +210,7 @@ void CH::processFinishedTasks(cPacket * packet) {
 
 void CH::printStatus() {
     //cmStatusWriter->writeStatus(CMStatus, numCMs);
-    scheduleAt(SIMTIME_DBL(simTime()) + printStatusStep, printStatusTimer);
+    scheduleAt(NOW + printStatusStep, printStatusTimer);
 }
 
 void CH::sendSafe(int id, cPacket * packet) {

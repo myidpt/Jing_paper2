@@ -25,6 +25,7 @@ void ITask::setServiceTime(double t) {
 
 int ITask::getTotalSubTasks() {
     cout << "getTotalSubTasks() is undefined." << endl;
+    return 0;
 }
 
 ITask::~ITask() {

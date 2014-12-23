@@ -34,21 +34,22 @@ protected:
                  << ", type=" << type << endl;
         }
     };
-    map<double, RTTask> rtTasks;
     ITask::TaskType myTaskType;
-    Inputfile * inputfile;
-    SimpleTask * nextRTTask;
     SimpleTask * nextNRTTask;
+    SimpleTask * nextRTTask;
     double period;
     double periods;
+    Inputfile * nrt_inputfile;
+    map<double, RTTask> rtTasks;
     map<double, RTTask>::iterator rtTaskIt;
 
     bool initialAverageWorkloadsAvailable;
     double initialAverageWorkloads[MAX_SENSORS];
 
-    bool parseInitialParameters(double input[]);
-    void parseRTInputFile(const string& filename);
+    void parseNRTInputFile(const string & filename);
+    void parseRTInputFile(const string & filename);
     void getRTTask();
+    void getNRTTask();
 public:
     TaskFactory(const string & filename, ITask::TaskType type);
     TaskFactory(const string &, const string &, ITask::TaskType, double);

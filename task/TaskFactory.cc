@@ -10,45 +10,43 @@
 
 using namespace std;
 
-TaskFactory::TaskFactory(const string & filename, ITask::TaskType type) {
-    inputfile = new Inputfile(filename);
-    myTaskType = type;
-    initialAverageWorkloadsAvailable = parseInitialParameters(initialAverageWorkloads);
-    nextNRTTask = NULL;
+TaskFactory::TaskFactory(const string & filename, ITask::TaskType type)
+: myTaskType(type), nextNRTTask (NULL) {
+    parseNRTInputFile(filename);
 }
 
 TaskFactory::TaskFactory(
-        const string & filename, const string & filename2, ITask::TaskType type, double p) {
-    inputfile = new Inputfile(filename);
-    myTaskType = type;
-    initialAverageWorkloadsAvailable = parseInitialParameters(initialAverageWorkloads);
-    nextNRTTask = NULL;
+        const string & filename1, const string & filename2, ITask::TaskType type, double p)
+: myTaskType(type), nextNRTTask (NULL), nextRTTask(NULL), period(p), periods(0) {
+    parseNRTInputFile(filename1);
     parseRTInputFile(filename2);
-    nextRTTask = NULL;
-    period = p;
-    periods = 0;
-    rtTaskIt = rtTasks.begin();
 }
 
 void TaskFactory::parseRTInputFile(const string& filename) {
-    Inputfile inputfile(filename);
+    Inputfile rt_inputfile(filename);
     string line;
     double time;
     int tasks;
-    double duration;
+    double cost;
     int type;
-    while(inputfile.readNextLine(line)) {
-        sscanf(line.c_str(), "%lf %d %lf %d", &time, &tasks, &duration, &type);
-        RTTask rtt(time, duration, tasks, type);
+    while(rt_inputfile.readNextLine(line)) {
+        sscanf(line.c_str(), "%lf %d %lf %d", &time, &tasks, &cost, &type);
+        RTTask rtt(time, cost, tasks, type);
         rtTasks.insert(pair<double, RTTask>(time, rtt));
     }
+    rtTaskIt = rtTasks.begin();
+    getRTTask();
 }
 
-bool TaskFactory::parseInitialParameters(double input[]) {
+void TaskFactory::parseNRTInputFile(const string & filename) {
+    nrt_inputfile = new Inputfile(filename);
     string line;
-    if (!inputfile->readNextLine(line)) {
-        return false;
+    if (!nrt_inputfile->readNextLine(line)) {
+        initialAverageWorkloadsAvailable = false;
+        return;
     }
+    getNRTTask();
+
     int start = 0;
     int end = 0;
     int colon = 0;
@@ -75,23 +73,23 @@ bool TaskFactory::parseInitialParameters(double input[]) {
             cerr << "parseInitialParameters: Value parsing error:" << valuestr << endl;
             break;
         }
-        input[sensorid] = value;
+        initialAverageWorkloads[sensorid] = value;
         if (end == (int)string::npos) { // This is the last one.
-            return true;
+            initialAverageWorkloadsAvailable = true;
+            return;
         }
         start = end + 1;
     }
 
     for (int i = 0; i < MAX_SENSORS; i ++) { // Set to be default.
-        input[i] = 0;
+        initialAverageWorkloads[i] = 0;
     }
-
-    return false;
+    initialAverageWorkloadsAvailable = false;
 }
 
 void TaskFactory::getRTTask() {
     if(rtTasks.empty()) {
-        cerr << "No RT tasks." << endl;
+        cout << "No RT tasks." << endl;
         return;
     }
     if(rtTaskIt == rtTasks.end()) { // Initial
@@ -102,8 +100,20 @@ void TaskFactory::getRTTask() {
     rtTaskIt++;
 
     nextRTTask = new SimpleTask();
-    nextRTTask->set(task.time + periods, task.num, task.type, task.cost * task.num);
     nextRTTask->realTime = true;
+    nextRTTask->set(task.time + periods, task.num, task.type, task.cost);
+}
+
+void TaskFactory::getNRTTask() {
+    string str;
+    if (nrt_inputfile->readNextLine(str)) {
+        nextNRTTask = new SimpleTask();
+        nextNRTTask->realTime = false;
+        if(!nextNRTTask->parseTaskString(str)) {
+            delete nextNRTTask;
+            nextNRTTask = NULL;
+        }
+    }
 }
 
 bool TaskFactory::getInitialAverageWorkloads(double workloads[]) {
@@ -117,35 +127,23 @@ bool TaskFactory::getInitialAverageWorkloads(double workloads[]) {
 }
 
 ITask * TaskFactory::createTask() {
-    if (nextRTTask == NULL) {
-        getRTTask();
-        if(nextRTTask == NULL) {
-            cerr << "No RT task got." << endl;
-        }
-    }
-
-    if (nextNRTTask == NULL) {
-        string str;
-        if (inputfile->readNextLine(str)) {
-            nextNRTTask = new SimpleTask();
-            if(!nextNRTTask->parseTaskString(str)) {
-                delete nextNRTTask;
-                nextNRTTask = NULL;
-            }
-        }
-    }
-
     SimpleTask * task;
-    if (nextRTTask->arrivalTime > nextNRTTask->arrivalTime) {
+    if (nextRTTask == NULL && nextNRTTask == NULL) {
+        cout << "No more tasks to dispatch." << endl;
+        return NULL;
+    }
+    else if (nextRTTask == NULL
+        || (nextNRTTask != NULL
+            && nextRTTask->arrivalTime > nextNRTTask->arrivalTime)) {
         task = nextNRTTask;
         nextNRTTask = NULL;
+        getNRTTask();
     }
     else {
         task = nextRTTask;
         nextRTTask = NULL;
+        getRTTask();
     }
-    cout << "Task: " << task->Id << ", arrivalTime=" << task->arrivalTime
-         << ", totalSubtasks=" << task->totalSubTasks << endl;
     return task;
 }
 

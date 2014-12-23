@@ -69,6 +69,7 @@ public:
     double getRemainingCost();
     double getServingWorkload();
     double getRemainingTimeBeforeDeadline();
+    double getDeadline();
     double getMaxDelay();
     int getServerId();
     void setServerId(int id);

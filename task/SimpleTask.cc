@@ -103,6 +103,10 @@ double SimpleTask::getRemainingTimeBeforeDeadline() {
     return maxDelay + arrivalTime - SIMTIME_DBL(simTime());
 }
 
+double SimpleTask::getDeadline() {
+    return maxDelay + arrivalTime;
+}
+
 double SimpleTask::getMaxDelay() {
     return maxDelay;
 }

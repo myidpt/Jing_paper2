@@ -8,6 +8,7 @@
 #include <iostream>
 #include "Inputfile.h"
 #include "ReservedQ.h"
+#define NOW SIMTIME_DBL(simTime())
 
 using namespace std;
 
@@ -20,13 +21,13 @@ ReservedQ::ReservedQ(int numcms, int numsensors, double p, double cr) {
     setNumSensors(numsensors);
     period = p;
     chargeRate = cr;
-    rtNodes = new RTNodes(period, chargeRate);
+    rtReserv = new RTReservation(numcms, period, chargeRate);
 }
 
 bool ReservedQ::setNumCMs(int numcms) {
-    if (MAX_CM < numCMs) {
+    if (MAX_CM < numcms) {
         cerr << "MAX_CM: " << MAX_CM << " is smaller than numCM: "
-             << numCMs << endl;
+             << numcms << endl;
         return false;
     }
     numCMs = numcms;
@@ -66,22 +67,31 @@ bool ReservedQ::setAverageWorkloads(double workloads[MAX_SENSORS]) {
 }
 
 void ReservedQ::readTaskStats(const char  * filename) {
-    rtNodes->constructNodes(filename);
+    rtReserv->constructNodes(filename);
 }
 
 bool ReservedQ::isEmpty() {
     return rtTaskQ->empty() && nrtTaskQ->empty();
 }
 
-bool ReservedQ::newArrival(ITask * task) {
+bool ReservedQ::newArrival(ITask * itask) {
+    SimpleTask * task = (SimpleTask *)itask;
     task->setParameter(SimpleTask::PARADEGREE, task->getTotalSubTasks());
-    if (task->realTime) {
-        rtTaskQ->push_front((SimpleTask *)task);
+    if (task->realTime) { // No deadline for real time tasks.
+        rtTaskQ->push_back(task);
     }
-    else {
-        nrtTaskQ->push_front((SimpleTask *)task);
+    else { // Deadlines exist for non-real-time tasks.
+        double deadline = task->getDeadline();
+        list<ITask *>::iterator it;
+        for (it = nrtTaskQ->begin(); it != nrtTaskQ->end(); it ++) {
+            if ((*it)->getDeadline() > deadline) {
+                nrtTaskQ->insert(it, task);
+            }
+        }
+        if (it == nrtTaskQ->end()) {
+            nrtTaskQ->push_back(task);
+        }
     }
-    //task->setParameter(SimpleTask::PARADEGREE, getParaDegree(task)); // Parallel degree
     return true;
 }
 
@@ -100,9 +110,14 @@ ITask * ReservedQ::dispatchNext() {
 
     list<ITask *>::iterator it;
     // We iterate rtTaskQ, then nrtTaskQ.
+    bool isRealtime = true;
     for (it = rtTaskQ->begin(); it != nrtTaskQ->end(); it ++) {
         if (it == rtTaskQ->end()) {
             it = nrtTaskQ->begin();
+            isRealtime = false;
+            if (it == nrtTaskQ->end()) {
+                break;
+            }
         }
         SimpleTask * task = (SimpleTask *)(*it);
         if (task->dispatched()) {
@@ -114,10 +129,20 @@ ITask * ReservedQ::dispatchNext() {
             continue; // No need to dispatch.
         }
 
-        for (int i = numCMs - 1; i >= 0; i --) { // For the CMs.
+        if (isRealtime) { // For the RT tasks.
+            int id = rtReserv->assignNodeForRT(NOW,task->getSensorId());
+            if (!CMStatus[id]->isAvailable() || !CMStatus[id]->hasSensor(sensorid)) {
+                cerr << NOW << " Allocating RT Task to CM#" << id
+                     << " that is not available!" << endl;
+                fflush(stdout);
+                fflush(stderr);
+                return NULL;
+            }
+            return task->createSubTask(1, CMStatus[id]); // CMStatus is also updated.
+        }
+        for (int i = 0; i < numCMs; i ++) { // For the NRT tasks, choose a CM.
             if (CMStatus[i]->isAvailable() && CMStatus[i]->hasSensor(sensorid)
-                && !rtNodes->findViolationForNode(i, CMStatus[i]->getPower(),
-                                                  SIMTIME_DBL(simTime()),
+                && !rtReserv->findViolationForNode(i, CMStatus[i]->getPower(), NOW,
                                                   task->getSubTaskCost())) {
                 // The CM is idle, has the sensor.
                 return task->createSubTask(1, CMStatus[i]); // CMStatus is also updated.

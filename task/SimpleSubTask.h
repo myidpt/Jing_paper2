@@ -51,6 +51,7 @@ public:
     double getComputeCost();
     double getRemainingCost();
     double getRemainingTimeBeforeDeadline();
+    double getDeadline();
     double getMaxDelay();
     ITask * getFatherTask();
     int getServerId();
