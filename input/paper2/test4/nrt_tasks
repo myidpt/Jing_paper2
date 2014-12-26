@@ -1,0 +1,8 @@
+# SensorID: rate, sensorID: rate, ...
+0:1,1:2
+# Id time num_sub sensor input output compute QoS_latency
+0 10 10 1 1 1 1000 200
+1 20 2 1 1 1 200 300
+2 20 2 1 1 1 200 100
+3 490 10 1 1 1 1000 200
+4 5500 10 1 1 1 1000 200

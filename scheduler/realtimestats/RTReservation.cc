@@ -135,12 +135,24 @@ void RTReservation::constructNodes(const char  * filename) {
         }
     }
     // Print out.
+    map<int, EThresholds *>::iterator itet = nodesEThresholds->begin();
+    cout << "Node ethresholds:" << endl;
+    for (; itet != nodesEThresholds->end(); itet ++) {
+        cout << "Node#" << itet->first << ": ";
+        EThresholds * eths = itet->second;
+        EThresholds::iterator ethsit = eths->begin();
+        for (; ethsit != eths->end(); ethsit ++) {
+            cout << "[" << ethsit->first << "," << ethsit->second << "]";
+        }
+        cout << endl;
+    }
+
     map<double, Nodeset *>::iterator it;
+    cout << "RT task allocations:" << endl;
     for (int type = 0; type < MAX_SENSORS; type ++) {
         for (it = allocations[type]->begin();
              it != allocations[type]->end(); it ++) {
             double time = it->first;
-            cout << "RT task allocations:" << endl;
             cout << "[" << time << "] ";
             Nodeset * ns = it->second;
             set<int>::iterator nsit;
@@ -199,15 +211,18 @@ bool RTReservation::findViolationForNode(
             break;
         }
     }
-    if (etit == eThresholds->end() && !eThresholds->empty()) {
-        // The NRT task s_offet is larger than all RT tasks,
-        // then verify against the first RT task.
-        rtt_offset = eThresholds->begin()->first;
-        rtt_energy = eThresholds->begin()->second;
+    if (etit == eThresholds->end()) {
+        if (!eThresholds->empty()) {
+            // The NRT task s_offet is larger than all RT tasks,
+            // then verify against the first RT task.
+            rtt_offset = eThresholds->begin()->first;
+            rtt_energy = eThresholds->begin()->second;
+        }
+        else { // No RT task on this node.
+            return false;
+        }
     }
-    else { // No RT task on this node.
-        return false;
-    }
+
     if (e_offset < s_offset) { // Wripped. s, (rtt,) N, (rtt,) e
         if (rtt_offset < e_offset || s_offset < rtt_offset) {
             // rt, e, n || e, n, rt -> violate by time
