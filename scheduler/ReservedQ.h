@@ -30,31 +30,9 @@ protected:
     IStatus * CMStatus[MAX_CM];
     double averageWorkloads[MAX_SENSORS];
     RTReservation * rtReserv;
-    double dischargeRate;
-
-    double restEnergy;
 
     list<ITask *> * rtTaskQ;
     list<ITask *> * nrtTaskQ;
-
-    double sensorTimeShare[MAX_CM][MAX_SENSORS];
-    void setSensorTimeShare();
-
-    double resourceQuantity[MAX_SENSORS]; // The resource quantity for each sensor.
-    void setResourceQuantity();
-
-    //double WRRatio[MAX_SENSORS];
-    //double NWRRatio[MAX_SENSORS];
-    //void setWRRatios();
-
-    //double importanceFactor[MAX_CM];
-    //void setImportanceFactor();
-
-    //double averageCompCap[MAX_SENSORS];
-    //void setAverageCompCap();
-
-    //int ifOrders[MAX_CM];
-    //void orderImportanceFactors();
 
     double period;
     double chargeRate;

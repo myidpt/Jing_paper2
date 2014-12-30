@@ -21,7 +21,7 @@ ReservedQ::ReservedQ(int numcms, int numsensors, double p, double cr) {
     setNumSensors(numsensors);
     period = p;
     chargeRate = cr;
-    rtReserv = new RTReservation(numcms, period, chargeRate);
+    rtReserv = new RTReservation(numcms, numsensors,period, chargeRate);
 }
 
 bool ReservedQ::setNumCMs(int numcms) {
@@ -45,11 +45,10 @@ bool ReservedQ::setNumSensors(int numsensors) {
 }
 
 bool ReservedQ::setCMStatus(IStatus * status[MAX_CM]) {
-    restEnergy = 0;
     for (int i = 0; i < numCMs; i ++) {
         CMStatus[i] = status[i];
-        restEnergy += CMStatus[i]->getPower();
     }
+    rtReserv->setStatus(status);
     return true;
 }
 
@@ -67,7 +66,7 @@ bool ReservedQ::setAverageWorkloads(double workloads[MAX_SENSORS]) {
 }
 
 void ReservedQ::readTaskStats(const char  * filename) {
-    rtReserv->constructNodes(filename);
+    rtReserv->makeReservation(filename);
 }
 
 bool ReservedQ::isEmpty() {

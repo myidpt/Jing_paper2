@@ -6,8 +6,8 @@
 #define TASK_RESP       4 // The task response.
 #define PRINT_STATUS    5 // The status printing timer.
 
-#define MAX_CM          2000
-#define MAX_SENSORS     2
+#define MAX_CM          1024
+#define MAX_SENSORS     4
 #define EACH_CM_GROUP   512
 
 #define ID_INDEX        1000

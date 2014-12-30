@@ -1,5 +1,3 @@
-
-
 #ifndef __JINGQIN_CH_H_
 #define __JINGQIN_CH_H_
 
