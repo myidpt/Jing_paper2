@@ -85,6 +85,7 @@ multimap<double, int> IMF::getIMF() {
             }
         }
     }
+
     double min = 10000000;
     for (int s = 0; s < numSensors; s ++) {
         resourceQuantity[s] = 0;
@@ -103,6 +104,7 @@ multimap<double, int> IMF::getIMF() {
             pwr[s] = 0;
         }
     }
+    min /= 2; // MIN is set to 2.
 
     for (int s = 0; s < numSensors; s ++) {
         if (pwr[s] != 0) {

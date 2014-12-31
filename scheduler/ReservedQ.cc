@@ -6,6 +6,7 @@
  */
 
 #include <iostream>
+#include <map>
 #include "Inputfile.h"
 #include "ReservedQ.h"
 #define NOW SIMTIME_DBL(simTime())
@@ -21,7 +22,8 @@ ReservedQ::ReservedQ(int numcms, int numsensors, double p, double cr) {
     setNumSensors(numsensors);
     period = p;
     chargeRate = cr;
-    rtReserv = new RTReservation(numcms, numsensors,period, chargeRate);
+    rtReserv = new RTReservation(numcms, numsensors, period, chargeRate);
+    imfCalculator = new IMF(numcms, numsensors);
 }
 
 bool ReservedQ::setNumCMs(int numcms) {
@@ -53,8 +55,7 @@ bool ReservedQ::setCMStatus(IStatus * status[MAX_CM]) {
 }
 
 bool ReservedQ::setCMSensors(bool sensors[MAX_CM][MAX_SENSORS]) {
-    // Don't need to do anything here.
-    // Sensor information are recorded in CMStatus.
+    imfCalculator->setCMSensors(sensors);
     return true;
 }
 
@@ -62,6 +63,7 @@ bool ReservedQ::setAverageWorkloads(double workloads[MAX_SENSORS]) {
     for (int i = 0; i < numSensors; i ++) {
         averageWorkloads[i] = workloads[i];
     }
+    imfCalculator->setWorkloads(averageWorkloads);
     return true;
 }
 
@@ -107,8 +109,15 @@ ITask * ReservedQ::dispatchNext() {
         return NULL;
     }
 
+    // Set the new power of each CM for the IMF calculator.
+    double power[MAX_CM];
+    for (int i = 0; i < numCMs; i ++) {
+        power[i] = CMStatus[i]->getPower();
+    }
+    imfCalculator->setCMPower(power);
+
     list<ITask *>::iterator it;
-    // We iterate rtTaskQ, then nrtTaskQ.
+    // In the following loop, we iterate rtTaskQ first, then nrtTaskQ.
     bool isRealtime = true;
     for (it = rtTaskQ->begin(); it != nrtTaskQ->end(); it ++) {
         if (it == rtTaskQ->end()) {
@@ -128,7 +137,8 @@ ITask * ReservedQ::dispatchNext() {
             continue; // No need to dispatch.
         }
 
-        if (isRealtime) { // For the RT tasks.
+        // For the RT tasks.
+        if (isRealtime) {
             int id = rtReserv->assignNodeForRT(NOW,task->getSensorId());
             if (!CMStatus[id]->isAvailable() || !CMStatus[id]->hasSensor(sensorid)) {
                 cerr << NOW << " Allocating RT Task to CM#" << id
@@ -139,12 +149,20 @@ ITask * ReservedQ::dispatchNext() {
             }
             return task->createSubTask(1, CMStatus[id]); // CMStatus is also updated.
         }
-        for (int i = 0; i < numCMs; i ++) { // For the NRT tasks, choose a CM.
-            if (CMStatus[i]->isAvailable() && CMStatus[i]->hasSensor(sensorid)
-                && !rtReserv->findViolationForNode(i, CMStatus[i]->getPower(), NOW,
-                                                  task->getSubTaskCost())) {
+
+        // For the NRT tasks, iterate with IMF from low to high.
+        multimap<double, int> imfmap = imfCalculator->getIMF();
+        multimap<double, int>::iterator imfit;
+        for (imfit = imfmap.begin(); imfit != imfmap.end(); imfit ++) {
+            int nodeid = imfit->second;
+            if (CMStatus[nodeid]->isAvailable()
+                && CMStatus[nodeid]->hasSensor(sensorid)
+                && !rtReserv->findViolationForNode(
+                    nodeid, CMStatus[nodeid]->getPower(),
+                    NOW, task->getSubTaskCost())) {
                 // The CM is idle, has the sensor.
-                return task->createSubTask(1, CMStatus[i]); // CMStatus is also updated.
+                // CMStatus is updated in sreateSubTask.
+                return task->createSubTask(1, CMStatus[nodeid]);
             }
         }
     }

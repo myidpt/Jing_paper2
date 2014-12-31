@@ -165,7 +165,6 @@ bool SimpleTask::setFinishedSubTask(ITask * task) {
 
     subTasks->remove(task);
 
-//    cout << "Get finished task #" << task->getId() << ", undispatchedSubTasks = " << undispatchedSubTasks << endl;
     if (unfinishedSubTasks < 0) {
         cerr << "[" << SIMTIME_DBL(simTime()) << "] ID:" << Id
              << " SimpleTask: unfinishedSubTasks < 0!!" << endl;

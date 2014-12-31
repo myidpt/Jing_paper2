@@ -73,6 +73,7 @@ void CH::initialize()
     else if (!algorithmName.compare("Reserved")) {
         queue = new ReservedQ(numCMs, numSensors, period, chargeRate);
         queue->setAverageWorkloads(averageWorkloads);
+        queue->setCMSensors(CMSensors);
         queue->setCMStatus(CMStatus);
         queue->readTaskStats(rttaskifilename.c_str());
     }
