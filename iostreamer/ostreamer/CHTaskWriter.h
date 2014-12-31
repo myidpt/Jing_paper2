@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <string>
 #include "Outputfile.h"
-#include "../../task/ITask.h"
+#include "task/SimpleTask.h"
 
 using namespace std;
 
@@ -21,7 +21,7 @@ protected:
     Outputfile * outputfile;
 public:
     CHTaskWriter(const string & filename);
-    bool writeTask(ITask * task);
+    bool writeSimpleTask(SimpleTask * task);
     virtual ~CHTaskWriter();
 };
 

@@ -60,8 +60,6 @@ ITask * SimpleTask::createSubTask(int chunks, IStatus * sstatus) {
 
     subTasks->push_front(subtask);
 
-//    cout << "Allocate #" << task->Id << " (" << task->computeCost << ") to server #" << task->getServerId() << endl;
-//    cout << "undispatchedSubTasks = " << undispatchedSubTasks << endl;
     return subtask;
 }
 
@@ -87,7 +85,8 @@ double SimpleTask::getComputeCost() {
 }
 
 double SimpleTask::getRemainingCost() {
-    return computeCost * undispatchedSubTasks / totalSubTasks + getServingWorkload();
+    return computeCost * undispatchedSubTasks / totalSubTasks
+        + getServingWorkload();
 }
 
 double SimpleTask::getServingWorkload() {
@@ -160,12 +159,11 @@ bool SimpleTask::setFinishedSubTask(ITask * task) {
         return false;
     }
     concurrency --;
-
     unfinishedSubTasks -= ((SimpleSubTask * )task)->chunks;
 
     subTasks->remove(task);
-
-//    cout << "Get finished task #" << task->getId() << ", undispatchedSubTasks = " << undispatchedSubTasks << endl;
+    subTaskStats.push_back(
+        pair<int, double>(task->getServerId(), task->getServiceTime()));
     if (unfinishedSubTasks < 0) {
         cerr << "[" << SIMTIME_DBL(simTime()) << "] ID:" << Id
              << " SimpleTask: unfinishedSubTasks < 0!!" << endl;
@@ -175,7 +173,6 @@ bool SimpleTask::setFinishedSubTask(ITask * task) {
     }
     else if (unfinishedSubTasks == 0) {
         finishTime = SIMTIME_DBL(simTime());
-//        cout << finishTime << ": Task #" << Id << " finished." << endl;
         return true;
     }
     return false;
@@ -202,8 +199,9 @@ bool SimpleTask::finished() {
 }
 
 bool SimpleTask::parseTaskString(string & line) {
-    if (sscanf(line.c_str(), "%d %lf %d %d %lf %lf %lf %lf", &Id, &arrivalTime, &totalSubTasks, &sensorId,
-            &inputData, &outputData, &computeCost, &maxDelay) == 8) {
+    if (sscanf(line.c_str(), "%d %lf %d %d %lf %lf %lf %lf",
+        &Id, &arrivalTime, &totalSubTasks, &sensorId,
+        &inputData, &outputData, &computeCost, &maxDelay) == 8) {
         undispatchedSubTasks = totalSubTasks;
         unfinishedSubTasks = totalSubTasks;
 //        printInformation();
@@ -243,12 +241,16 @@ int SimpleTask::getConcurrency() {
     return concurrency;
 }
 
+vector<pair<int, double> > SimpleTask::getSubTaskStats() {
+    return subTaskStats;
+}
+
 void SimpleTask::printInformation() {
 //    cout << "Id = " << Id <<
-//            ", arrivalTime = " << arrivalTime << ", totalSubTasks = " << totalSubTasks <<
-//            ", sensorId = " << sensorId << ", inputData = " << inputData <<
-//            ", outputData = " << outputData << ", computeCost = " << computeCost <<
-//            ", maxDelay = " << maxDelay << endl;
+//        ", arrivalTime = " << arrivalTime << ", totalSubTasks = " << totalSubTasks <<
+//        ", sensorId = " << sensorId << ", inputData = " << inputData <<
+//        ", outputData = " << outputData << ", computeCost = " << computeCost <<
+//        ", maxDelay = " << maxDelay << endl;
 
     cout << "SimpleTask, Id = " << Id <<
             ", arrivalTime = " << arrivalTime << endl;

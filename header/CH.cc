@@ -197,7 +197,7 @@ void CH::processFinishedTasks(cPacket * packet) {
          << " from CM#" << task->getServerId() << endl;
 
     if (queue->finishedTask(task)) {
-        taskWriter->writeTask(fathertask);
+        taskWriter->writeSimpleTask((SimpleTask *)fathertask);
         delete fathertask;
     }
     delete task;

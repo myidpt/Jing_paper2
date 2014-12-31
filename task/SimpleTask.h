@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <string>
+#include <vector>
 #include "ITask.h"
 #include "SimpleSubTask.h"
 #include "status/IStatus.h"
@@ -35,6 +36,7 @@ protected:
     int paradegree; // target concurrency
     int concurrency; // current concurrency
     list<ITask * > * subTasks;
+    vector<pair<int, double> > subTaskStats; // CM, start time
 
     SimpleTask();
 public:
@@ -87,6 +89,7 @@ public:
     void set(double time, int num, int sid, double cc);
     bool dispatched();
     bool finished();
+    vector<pair<int, double> > getSubTaskStats();
     void printInformation();
     virtual ~SimpleTask();
     friend class TaskFactory;
