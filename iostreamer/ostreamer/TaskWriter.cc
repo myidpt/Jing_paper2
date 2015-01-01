@@ -1,19 +1,22 @@
 /*
- * CHTaskWriter.cpp
+ * TaskWriter.cpp
  *  Writes the task finish time stamps to the output file.
  *  Created on: Apr 9, 2013
  *      Author: yonggang
  */
 
 #include <vector>
-#include "CHTaskWriter.h"
+#include "TaskWriter.h"
+#include "Outputfile.h"
+#include "task/SimpleTask.h"
+#include "task/SimpleSubTask.h"
 
-CHTaskWriter::CHTaskWriter(const string & filename) {
+TaskWriter::TaskWriter(const string & filename) {
     outputfile = new Outputfile(filename);
     outputfile->writeLine("#ID arrival_time finish_time execution_time sensor_id");
 }
 
-bool CHTaskWriter::writeSimpleTask(SimpleTask * task) {
+bool TaskWriter::writeSimpleTask(SimpleTask * task) {
     char buff[200];
     sprintf(buff, "%d %.2lf %.2lf %.2lf %d",
             task->getId(),
@@ -32,7 +35,19 @@ bool CHTaskWriter::writeSimpleTask(SimpleTask * task) {
     return true;
 }
 
-CHTaskWriter::~CHTaskWriter() {
+bool TaskWriter::writeSimpleSubTask(SimpleSubTask * task) {
+    char buff[200];
+    sprintf(buff, "%d %.2lf %.2lf %.2lf %d",
+            task->getId(),
+            task->getArrivalTime(),
+            task->getFinishTime(),
+            task->getFinishTime() - task->getArrivalTime(),
+            task->getSensorId());
+    outputfile->writeLine(string(buff));
+    return true;
+}
+
+TaskWriter::~TaskWriter() {
     if (outputfile != NULL) {
         delete outputfile;
     }

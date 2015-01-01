@@ -22,6 +22,8 @@ simple CM
 {
     parameters:
         @display("i=device/pc2");
+        string task_output_filename;
+        string status_output_filename;
     gates:
         inout gate;
 }

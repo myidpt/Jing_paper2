@@ -62,6 +62,7 @@ public:
     int getSensorId();
     double getArrivalTime();
     double getFinishTime();
+    void setFinishTime(double);
     ITask * createSubTask(int num, IStatus * server);
     ITask * getFatherTask();
     ITask::TaskType getTaskType();

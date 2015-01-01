@@ -1,13 +1,14 @@
-
-
 #ifndef __JINGQIN_CM_H_
 #define __JINGQIN_CM_H_
 
 #include <omnetpp.h>
+#include <vector>
 #include "General.h"
 #include "status/IStatus.h"
 #include "status/SimpleStatus.h"
 #include "task/ITask.h"
+#include "iostreamer/ostreamer/StatusWriter.h"
+#include "iostreamer/ostreamer/TaskWriter.h"
 
 
 class CM : public cSimpleModule
@@ -18,6 +19,9 @@ protected:
     cPacket * taskAtService; // To record the current task at service.
     IStatus * status;
 
+    StatusWriter * statusWriter;
+    TaskWriter * taskWriter;
+
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);
 
@@ -26,6 +30,8 @@ protected:
     inline void processFinishedTask(cPacket * packet);
 
     void sendSafe(cPacket * packet);
+
+    void finish();
 };
 
 #endif

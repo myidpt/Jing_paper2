@@ -42,8 +42,11 @@ void SimpleSubTask::setServiceTime(double t) {
 }
 
 double SimpleSubTask::getFinishTime() {
-    cerr << "SimpleSubTask does not have getFinishTime." << endl;
-    return 0;
+    return finishTime;
+}
+
+void SimpleSubTask::setFinishTime(double time) {
+    finishTime = time;
 }
 
 ITask * SimpleSubTask::getFatherTask() {

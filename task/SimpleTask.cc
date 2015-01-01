@@ -36,6 +36,10 @@ double SimpleTask::getFinishTime() {
     return finishTime;
 }
 
+void SimpleTask::setFinishTime(double) {
+    cerr << "SimpleTask does not have setFinishTime." << endl;
+}
+
 // Return NULL if all dispatched.
 ITask * SimpleTask::createSubTask(int chunks, IStatus * sstatus) {
     if (undispatchedSubTasks == 0) { // All dispatched.

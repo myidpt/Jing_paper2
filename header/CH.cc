@@ -36,7 +36,8 @@ void CH::initialize()
     // Init taskFactory.
     if (!algorithmName.compare("Reserved")) {
         taskFactory = new TaskFactory(
-                nrttaskifilename, rttaskifilename, ITask::SimpleTaskType, period);
+                nrttaskifilename, rttaskifilename,
+                ITask::SimpleTaskType, period);
     }
     else {
         taskFactory = new TaskFactory(nrttaskifilename, ITask::SimpleTaskType);
@@ -79,8 +80,7 @@ void CH::initialize()
     }
 
     // Init writers.
-    taskWriter = new CHTaskWriter(taskofilename);
-    cmStatusWriter = new CMStatusWriter(statusofilename);
+    taskWriter = new TaskWriter(taskofilename);
 
     // Init print timer.
     printStatusTimer = new cPacket("PRINT_STATUS", PRINT_STATUS);
@@ -242,9 +242,5 @@ void CH::finish() {
     if (taskWriter) {
         delete taskWriter;
         taskWriter = NULL;
-    }
-    if (cmStatusWriter) {
-        delete cmStatusWriter;
-        cmStatusWriter = NULL;
     }
 }

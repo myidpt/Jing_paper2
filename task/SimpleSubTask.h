@@ -45,6 +45,7 @@ public:
     double getServiceTime();
     void setServiceTime(double);
     double getFinishTime();
+    void setFinishTime(double);
     ITask::TaskType getTaskType();
     double getInputData();
     double getOutputData();

@@ -6,8 +6,8 @@
 #include <list>
 #include "General.h"
 #include "task/SimpleTask.h"
-#include "iostreamer/ostreamer/CHTaskWriter.h"
-#include "iostreamer/ostreamer/CMStatusWriter.h"
+#include "iostreamer/ostreamer/TaskWriter.h"
+#include "iostreamer/ostreamer/StatusWriter.h"
 #include "task/TaskFactory.h"
 #include "status/StatusFactory.h"
 #include "scheduler/IQueue.h"
@@ -31,8 +31,7 @@ protected:
     TaskFactory * taskFactory;
     StatusFactory * statusFactory;
 
-    CHTaskWriter * taskWriter;
-    CMStatusWriter * cmStatusWriter;
+    TaskWriter * taskWriter;
 
     cPacket * selfNextTaskTimer;
 

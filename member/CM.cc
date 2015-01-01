@@ -1,6 +1,11 @@
-
+#include <string>
 #include "SimpleSubTask.h"
 #include "CM.h"
+#include "iostreamer/ostreamer/StatusWriter.h"
+#include "iostreamer/ostreamer/TaskWriter.h"
+#include "task/SimpleSubTask.h"
+
+#define NOW SIMTIME_DBL(simTime())
 
 Define_Module(CM);
 
@@ -12,6 +17,26 @@ void CM::initialize()
     taskAtService = NULL;
     myId = idInit;
     idInit ++;
+
+    string task_file_prefix = par(
+        "task_output_filename").stdstringValue();
+    string status_file_prefix = par(
+        "status_output_filename").stdstringValue();
+    string task_file = task_file_prefix + "0000";
+    string status_file = status_file_prefix + "0000";
+    int tf_sb = task_file_prefix.length(); // The start bit of the digit area.
+    int sf_sb = status_file_prefix.length(); // The start bit of the digit area.
+    task_file[tf_sb] = myId / 1000 + '0';
+    status_file[sf_sb] = myId / 1000 + '0';
+    task_file[tf_sb + 1] = myId % 1000 / 100 + '0';
+    status_file[sf_sb + 1] = myId % 1000 / 100 + '0';
+    task_file[tf_sb + 2] = myId % 100 / 10 + '0';
+    status_file[sf_sb + 2] = myId % 100 / 10 + '0';
+    task_file[tf_sb + 3] = myId % 10 + '0';
+    status_file[sf_sb + 3] = myId % 10 + '0';
+
+    statusWriter = new StatusWriter(status_file);
+    taskWriter = new TaskWriter(task_file);
 }
 
 void CM::handleMessage(cMessage *msg)
@@ -47,13 +72,14 @@ void CM::processTask(cPacket * packet) {
     taskAtService = packet;
     packet->setKind(TASK_COMP);
     if (task->getTaskType() == ITask::SimpleSubTaskType) {
-        task->setServiceTime(SIMTIME_DBL(simTime()));
+        task->setServiceTime(NOW);
         double timespan = task->getComputeCost() / status->getComputeCap();
         scheduleAt(SIMTIME_DBL(simTime()) + timespan, packet);
     }
     else {
         cerr << "CM::processTask: unsupported task type." << endl;
     }
+    statusWriter->writeStatus(status);
 }
 
 void CM::processFinishedTask(cPacket * packet) {
@@ -61,8 +87,11 @@ void CM::processFinishedTask(cPacket * packet) {
     packet->setKind(TASK_RESP);
     cMsgPar par = packet->par(TASK_PAR);
     ITask * task = (ITask *)(par.pointerValue());
+    task->setFinishTime(NOW);
     packet->setBitLength(task->getOutputData() * MB_TO_BIT);
     sendSafe(packet);
+    statusWriter->writeStatus(status);
+    taskWriter->writeSimpleSubTask((SimpleSubTask *)task);
 }
 
 void CM::processStatus(cPacket * packet) {
@@ -80,4 +109,9 @@ void CM::sendSafe(cPacket * packet){
     else {
         send(packet, "gate$o");
     }
+}
+
+void CM::finish() {
+    delete taskWriter;
+    delete statusWriter;
 }

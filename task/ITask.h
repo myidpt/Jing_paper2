@@ -29,6 +29,7 @@ public:
     virtual double getServiceTime();
     virtual void setServiceTime(double);
     virtual double getFinishTime() = 0;
+    virtual void setFinishTime(double) = 0;
     virtual int getSensorId() = 0;
     virtual TaskType getTaskType() = 0;
     virtual double getInputData() = 0;
