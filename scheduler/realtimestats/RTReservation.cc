@@ -78,12 +78,14 @@ double RTReservation::constructPThreshold(
             }
         }
     }
-    else if (task_time < period/2 && (task_time + task_span) > period/2) { // day-&-night
+    else if (task_time < period/2 && (task_time + task_span) > period/2) {
+        // day-&-night
         cost = task_span - (period/2 - task_time) * chargeRate;
     }
     else { // All at day
         cost = task_span * (1 - chargeRate);
-        idleCharge = (next_time - task_time - task_span) * chargeRate;
+        double chargeEnd = next_time < (period/2) ? next_time : (period/2);
+        idleCharge = (chargeEnd - task_time - task_span) * chargeRate;
     }
     new_th -= idleCharge;
     if (new_th < 0 ){
@@ -146,6 +148,7 @@ void RTReservation::makeReservation(const char  * filename) {
             // For the subtasks.
             if (imfit == imf.end()) {
                 cerr << "Not enough nodes for the realtime tasks!" << endl;
+                printReservation();
                 return;
             }
             int nodeid = imfit->second;
@@ -249,13 +252,17 @@ bool RTReservation::findViolationForNode(
                      + (e_offset - period/2);
         }
     }
-    else { // M, n
+    else { // M, s
         if (e_offset > period/2) { // M, s, e, N
             power -= e_offset - s_offset;
         }
         else { // M, s, N, e
             power -= (1 - chargeRate) * e_offset + period - s_offset;
         }
+    }
+
+    if (power < 0) { // Power is not enough!
+        return true;
     }
 
     map<int,  PThresholds *>::iterator it = nodesPThresholds->find(id);

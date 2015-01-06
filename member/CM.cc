@@ -22,6 +22,7 @@ void CM::initialize()
         "task_output_filename").stdstringValue();
     string status_file_prefix = par(
         "status_output_filename").stdstringValue();
+    period = par("period").doubleValue();
     string task_file = task_file_prefix + "0000";
     string status_file = status_file_prefix + "0000";
     int tf_sb = task_file_prefix.length(); // The start bit of the digit area.
@@ -37,6 +38,10 @@ void CM::initialize()
 
     statusWriter = new StatusWriter(status_file);
     taskWriter = new TaskWriter(task_file);
+
+    cPacket * pPacket = new cPacket("DAY-NIGHT");
+    pPacket->setKind(DAY_NIGHT);
+    scheduleAt(period/2, pPacket);
 }
 
 void CM::handleMessage(cMessage *msg)
@@ -51,6 +56,9 @@ void CM::handleMessage(cMessage *msg)
         break;
     case TASK_COMP:
         processFinishedTask(packet);
+        break;
+    case DAY_NIGHT:
+        processDayNightMsg(packet);
         break;
     default:
         cerr << "CM #" << myId << ": unknown packet kind: "
@@ -100,6 +108,10 @@ void CM::processStatus(cPacket * packet) {
     delete packet;
 }
 
+void CM::processDayNightMsg(cPacket * packet) {
+    statusWriter->writeStatus(status);
+    scheduleAt(NOW + period/2, packet);
+}
 
 void CM::sendSafe(cPacket * packet){
     cChannel * cch = gate("gate$o")->getTransmissionChannel();

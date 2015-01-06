@@ -16,6 +16,7 @@ class CM : public cSimpleModule
 protected:
     static int idInit;
     int myId;
+    double period;
     cPacket * taskAtService; // To record the current task at service.
     IStatus * status;
 
@@ -28,6 +29,7 @@ protected:
     inline void processStatus(cPacket * packet);
     inline void processTask(cPacket * packet);
     inline void processFinishedTask(cPacket * packet);
+    inline void processDayNightMsg(cPacket * packet);
 
     void sendSafe(cPacket * packet);
 

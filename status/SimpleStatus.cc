@@ -5,8 +5,8 @@
  *      Author: yonggang
  */
 
-#define CHECK_POWER \
-    do {if (power < 0) cerr << "power is below 0" << endl; \
+#define CHECK_POWER(id) \
+    do {if (power < 0) cerr << "Status#" << (id) << ": Power is below 0" << endl; \
     else if (power > maxPower) power = maxPower; break;} while(true);
 
 #include <assert.h>
@@ -55,20 +55,20 @@ void SimpleStatus::updatePower(double now) {
         double n_offset = now - n_periods * period;
         int more_periods = n_periods - l_periods;
 
-        if(l_offset < period/2) { // In sunlight.
-            if(n_offset < period/2) { // In sunlight.
-                day_secs = n_offset - l_offset + more_periods*period/2;
+        if (l_offset < period/2) { // In sunlight.
+            if (n_offset < period/2) { // In sunlight.
+                day_secs = n_offset - l_offset + more_periods * period/2;
             }
             else {
-                day_secs = period/2 - l_offset + more_periods*period/2;
+                day_secs = period/2 - l_offset + more_periods * period/2;
             }
         }
-        else {
-            if(n_offset < period/2) {
-                day_secs = n_offset + (more_periods - 1)*period/2;
+        else { // l_offset >= period/2
+            if (n_offset < period/2) {
+                day_secs = n_offset + (more_periods - 1) * period/2;
             }
             else {
-                day_secs = more_periods*period/2;
+                day_secs = more_periods * period/2;
             }
         }
         power += day_secs * chargeRate;
@@ -91,25 +91,25 @@ void SimpleStatus::updatePower(double now) {
         if(n_offset <= period/2) {
             if(l_offset > n_offset) { // l_offset is at night.
                 power -= night_dis_rate * (period - l_offset);
-                CHECK_POWER
+                CHECK_POWER(myId)
                 power -= day_dis_rate * n_offset;
-                CHECK_POWER
+                CHECK_POWER(myId)
             }
             else {
                 power -= day_dis_rate * (n_offset - l_offset);
-                CHECK_POWER
+                CHECK_POWER(myId)
             }
         }
         else {
             if(l_offset < period/2) {
                 power -= day_dis_rate * (period/2 - l_offset);
-                CHECK_POWER
+                CHECK_POWER(myId)
                 power -= night_dis_rate * (n_offset - period/2);
-                CHECK_POWER
+                CHECK_POWER(myId)
             }
             else {
                 power -= night_dis_rate * (n_offset - l_offset);
-                CHECK_POWER
+                CHECK_POWER(myId)
             }
         }
     }
@@ -253,57 +253,6 @@ bool SimpleStatus::parseStatusString(const string & str) {
 }
 
 void SimpleStatus::printInformation() {
-}
-
-void SimpleStatus::test() {
-    cout << "Testing SimpleStatus.-----------------------" << endl;
-    period = 4000;
-    chargeRate = 0.5;
-    maxPower = 500;
-    power = maxPower;
-    sensorCosts[1] = 1;
-    updatePower(0);
-    assert(power == maxPower);
-    updatePower(100);
-    assert(power == maxPower);
-    assert(lastPowerUpdateTime == 100);
-
-    SimpleSubTask * st1 = new SimpleSubTask(NULL, 1, NULL);
-    st1->sensorId = 1;
-
-    currentTask = st1; // Assign task at 100.
-    updatePower(400);
-    currentTask = NULL; // Task finish.
-    assert(power == 350);
-    updatePower(700);
-    assert(power == 500); // Charged.
-    updatePower(1000);
-    assert(power == maxPower);
-    updatePower(1800);
-    currentTask = st1; // Assign task at 1800.
-    updatePower(2100);
-    assert(power == 300);
-    currentTask = NULL; // Task finish.
-    updatePower(3000);
-    assert(power == 300);
-    updatePower(4200);
-    assert(power == 400); // Charged 100.
-    currentTask = st1; // Assign task at 100.
-    updatePower(4400);
-    assert(power == 300); // Discharged 100.
-    updatePower(4600);
-    assert(power == 200); // Discharged 100.
-    currentTask = NULL;
-    updatePower(7800);
-    assert(power == 500); // Charged to full.
-    currentTask = st1; // Assign task at 7800.
-    updatePower(8200);
-    assert(power == 200); // Discharged 300.
-    currentTask = NULL;
-
-    cout << "At 3000, power=" << power << endl;
-    cout << "Testing SimpleStatus done.-----------------------" << endl;
-    while(true);
 }
 
 SimpleStatus::~SimpleStatus() {

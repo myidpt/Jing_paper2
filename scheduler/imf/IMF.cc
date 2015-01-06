@@ -5,6 +5,20 @@
 
 using namespace std;
 
+void IMF::printIMF(multimap<double, int> imf) {
+    multimap<double, int>::iterator imfit = imf.begin();
+    cout << "Print IMF:";
+    int i = 0;
+    for (;imfit != imf.end(); imfit ++) {
+        if (i % 10 == 0) {
+            cout << endl;
+        }
+        cout << "[" << imfit->first << "," << imfit->second << "] ";
+        i ++;
+    }
+    cout << endl;
+}
+
 IMF::IMF(int numcms, int numsensors) {
     if (MAX_CM < numCMs) {
         numcms = MAX_CM;

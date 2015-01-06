@@ -24,6 +24,7 @@ simple CM
         @display("i=device/pc2");
         string task_output_filename;
         string status_output_filename;
+        double period;
     gates:
         inout gate;
 }

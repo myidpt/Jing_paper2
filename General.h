@@ -5,6 +5,7 @@
 #define TASK_COMP       3 // Self timer for timing the computation of task.
 #define TASK_RESP       4 // The task response.
 #define PRINT_STATUS    5 // The status printing timer.
+#define DAY_NIGHT       6 // To trigger the day-night changes.
 
 #define MAX_CM          1024
 #define MAX_SENSORS     4

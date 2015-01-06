@@ -34,6 +34,7 @@ protected:
     bool CMSensors[MAX_CM][MAX_SENSORS];
     double workloads[MAX_SENSORS];
 public:
+    static void printIMF(multimap<double, int> imf);
     IMF(int numcms, int numsensors);
     // You need to set power, sensors and workload to get PWR.
     void setCMPower(double p[MAX_CM]);

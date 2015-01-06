@@ -11,13 +11,15 @@
 #include "task/SimpleTask.h"
 #include "task/SimpleSubTask.h"
 
+#define BUF_SIZE 1000
+
 TaskWriter::TaskWriter(const string & filename) {
     outputfile = new Outputfile(filename);
     outputfile->writeLine("#ID arrival_time finish_time execution_time sensor_id");
 }
 
 bool TaskWriter::writeSimpleTask(SimpleTask * task) {
-    char buff[200];
+    char buff[BUF_SIZE];
     sprintf(buff, "%d %.2lf %.2lf %.2lf %d",
             task->getId(),
             task->getArrivalTime(),
@@ -30,6 +32,10 @@ bool TaskWriter::writeSimpleTask(SimpleTask * task) {
     int position = sprintf(buff, "SUB ");
     for (it = taskstats.begin(); it != taskstats.end(); it ++) {
         position += sprintf(buff + position, "[%d]%.2lf,", it->first, it->second);
+        if (position > BUF_SIZE) {
+            cerr << "Output buff size not enough! "
+                 << position << " > " << BUF_SIZE << endl;
+        }
     }
     outputfile->writeLine(string(buff));
     return true;

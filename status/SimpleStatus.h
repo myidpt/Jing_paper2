@@ -54,7 +54,6 @@ public:
 //    string genStatusString();
     bool parseStatusString(const string & str);
     void printInformation(); // For debugging.
-    void test();
     virtual ~SimpleStatus();
     friend class StatusFactory;
 };

@@ -180,7 +180,9 @@ void CH::processTasks() {
         packet->setBitLength(subtask->getInputData() * MB_TO_BIT);
         sendSafe(subtask->getServerId(), packet);
         cout << NOW << " CH: assign task id = " << subtask->getId()
-             << " to CM#" << subtask->getServerId() << endl;
+             << " to CM#" << subtask->getServerId()
+             << " (RT=" << subtask->realTime << ")"
+             << " power=" << CMStatus[subtask->getSensorId()]->getPower() << endl;
     }
 }
 
