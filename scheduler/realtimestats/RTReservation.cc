@@ -279,7 +279,7 @@ bool RTReservation::findViolationForNode(
     // in that case, the node is not available.
     // Worry about if an RT task will start when the NRT task is not finished.
     for (ptit = pThresholds->begin(); ptit != pThresholds->end(); ++ ptit) {
-        if (ptit->first > s_offset) {
+        if (s_offset <= ptit->first) {
             rtt_offset = ptit->first;
             rtt_power = ptit->second;
             break;
@@ -311,7 +311,7 @@ bool RTReservation::findViolationForNode(
         }
     }
     else { // D, s, e, D.
-        if (s_offset < rtt_offset && rtt_offset < e_offset) {
+        if (s_offset <= rtt_offset && rtt_offset < e_offset) {
             // n, rt, e -> violate by time
             return true;
         }

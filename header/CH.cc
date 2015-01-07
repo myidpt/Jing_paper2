@@ -179,10 +179,12 @@ void CH::processTasks() {
         packet->addPar(par);
         packet->setBitLength(subtask->getInputData() * MB_TO_BIT);
         sendSafe(subtask->getServerId(), packet);
+#ifdef DEBUG
         cout << NOW << " CH: assign task id = " << subtask->getId()
              << " to CM#" << subtask->getServerId()
              << " (RT=" << subtask->realTime << ")"
              << " power=" << CMStatus[subtask->getSensorId()]->getPower() << endl;
+#endif
     }
 }
 
@@ -195,10 +197,10 @@ void CH::processFinishedTasks(cPacket * packet) {
         cerr << "Fathertask == NULL." << endl;
         return;
     }
-
+#ifdef DEBUG
     cout << NOW << " CH: finished task id = " << task->getId()
          << " from CM#" << task->getServerId() << endl;
-
+#endif
     if (queue->finishedTask(task)) {
         taskWriter->writeSimpleTask((SimpleTask *)fathertask);
         delete fathertask;

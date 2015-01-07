@@ -131,7 +131,8 @@ ITask * ReservedQ::dispatchNext() {
         if (task->dispatched()) {
             continue;
         }
-        int sensorid = task->getSensorId(); // Get the required sensor ID of the task.
+        int sensorid = task->getSensorId();
+        // Get the required sensor ID of the task.
 
         if (task->getRemainingCost() == 0) {
             continue; // No need to dispatch.
@@ -140,14 +141,22 @@ ITask * ReservedQ::dispatchNext() {
         // For the RT tasks.
         if (isRealtime) {
             int id = rtReserv->assignNodeForRT(NOW,task->getSensorId());
-            if (!CMStatus[id]->isAvailable() || !CMStatus[id]->hasSensor(sensorid)) {
+            if (!CMStatus[id]->hasSensor(sensorid)) {
+                // This should never happen.
                 cerr << NOW << " Allocating RT Task to CM#" << id
-                     << " that is not available!" << endl;
+                     << " does not have the sensor!" << endl;
                 fflush(stdout);
                 fflush(stderr);
                 return NULL;
             }
-            return task->createSubTask(1, CMStatus[id]); // CMStatus is also updated.
+            if (!CMStatus[id]->isAvailable()) {
+                // Should be available at the same time,
+                // but in later position in the queue.
+                // Slot can be secured by finding violations.
+                continue;
+            }
+            return task->createSubTask(1, CMStatus[id]);
+            // CMStatus is also updated.
         }
 
         // For the NRT tasks, iterate with IMF from low to high.
@@ -173,7 +182,8 @@ bool ReservedQ::finishedTask(ITask * task) {
     SimpleTask * fathertask = (SimpleTask *)(task->getFatherTask());
     int cmid = task->getServerId();
     CMStatus[cmid]->taskFinish(); // Set CM idle.
-    if (fathertask->setFinishedSubTask(task)) { // Remove the father task from queue.
+    if (fathertask->setFinishedSubTask(task)) {
+        // Remove the father task from queue.
         if (task->realTime) {
             rtTaskQ->remove(fathertask);
         }
