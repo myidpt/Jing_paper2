@@ -11,7 +11,7 @@
 #include "task/SimpleTask.h"
 #include "task/SimpleSubTask.h"
 
-#define BUF_SIZE 1000
+#define BUFF_SIZE 1000
 
 TaskWriter::TaskWriter(const string & filename) {
     outputfile = new Outputfile(filename);
@@ -19,22 +19,28 @@ TaskWriter::TaskWriter(const string & filename) {
 }
 
 bool TaskWriter::writeSimpleTask(SimpleTask * task) {
-    char buff[BUF_SIZE];
-    sprintf(buff, "%d %.2lf %.2lf %.2lf %d",
+    char buff[BUFF_SIZE];
+    int pos = sprintf(buff, "%d %.2lf %.2lf %.2lf %d",
             task->getId(),
             task->getArrivalTime(),
             task->getFinishTime(),
             task->getFinishTime() - task->getArrivalTime(),
             task->getSensorId());
+    if (task->realTime) {
+        sprintf(buff + pos, " R");
+    }
+    else {
+        sprintf(buff + pos, " N");
+    }
     outputfile->writeLine(string(buff));
     vector<pair<int, double> > taskstats = task->getSubTaskStats();
     vector<pair<int, double> >::iterator it;
     int position = sprintf(buff, "SUB ");
     for (it = taskstats.begin(); it != taskstats.end(); it ++) {
         position += sprintf(buff + position, "[%d]%.2lf,", it->first, it->second);
-        if (position > BUF_SIZE) {
+        if (position > BUFF_SIZE) {
             cerr << "Output buff size not enough! "
-                 << position << " > " << BUF_SIZE << endl;
+                 << position << " > " << BUFF_SIZE << endl;
         }
     }
     outputfile->writeLine(string(buff));

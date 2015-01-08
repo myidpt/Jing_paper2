@@ -58,6 +58,7 @@ public:
     void makeReservation(const char  * filename);
     bool findViolationForNode(int i, double power, double now, double cost);
     int assignNodeForRT(double time, int type);
+    void confirmAssignment(int type);
     virtual ~RTReservation();
 };
 

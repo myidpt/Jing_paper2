@@ -140,6 +140,13 @@ ITask * ReservedQ::dispatchNext() {
 
         // For the RT tasks.
         if (isRealtime) {
+            if (NOW != task->getArrivalTime()) {
+                cerr << NOW << " RT task#" << task->getId() << " is delayed!" << endl;
+                fflush(stdout);
+                fflush(stderr);
+                while(true);
+                return NULL;
+            }
             int id = rtReserv->assignNodeForRT(NOW,task->getSensorId());
             if (!CMStatus[id]->hasSensor(sensorid)) {
                 // This should never happen.
@@ -155,6 +162,7 @@ ITask * ReservedQ::dispatchNext() {
                 // Slot can be secured by finding violations.
                 continue;
             }
+            rtReserv->confirmAssignment(task->getSensorId());
             return task->createSubTask(1, CMStatus[id]);
             // CMStatus is also updated.
         }

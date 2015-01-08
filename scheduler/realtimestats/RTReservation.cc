@@ -333,7 +333,7 @@ bool RTReservation::findViolationForNode(
 int RTReservation::assignNodeForRT(double time, int type) {
     // Index is still within the prepared range, the same RT task.
     if (rtNodeAssignIndex[type] < rtNodeNum[type]) {
-        return rtNodeAssignTracker[type][rtNodeAssignIndex[type]++];
+        return rtNodeAssignTracker[type][rtNodeAssignIndex[type]];
     }
     // Index is out of the prepared range, it's the next RT task.
     double phase_time = time - (int)(time / period) * period;
@@ -350,8 +350,12 @@ int RTReservation::assignNodeForRT(double time, int type) {
     }
     rtNodeNum[type] = i;
     // Point to the next server ID (Index 0 is used by this call).
-    rtNodeAssignIndex[type] = 1;
+    rtNodeAssignIndex[type] = 0;
     return rtNodeAssignTracker[type][0]; // Return the first server ID.
+}
+
+void RTReservation::confirmAssignment(int type) {
+    rtNodeAssignIndex[type]++;
 }
 
 RTReservation::~RTReservation() {
