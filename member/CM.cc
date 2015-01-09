@@ -106,6 +106,7 @@ void CM::processStatus(cPacket * packet) {
     cMsgPar par = packet->par(STATUS_PAR);
     status = (IStatus *)(par.pointerValue());
     delete packet;
+    statusWriter->writeStatus(status);
 }
 
 void CM::processDayNightMsg(cPacket * packet) {
