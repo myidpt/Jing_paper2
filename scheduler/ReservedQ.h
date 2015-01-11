@@ -40,12 +40,6 @@ protected:
 
     IMF * imfCalculator;
 
-    bool laggedBehind(ITask * task);
-
-    void setCMDead(int cmid);
-
-    //void rankImportanceFactorByEnergy(int, int);
-
 public:
     ReservedQ(int, int, double, double);
 

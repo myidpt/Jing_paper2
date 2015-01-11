@@ -236,7 +236,7 @@ void RTReservation::printReservation() {
 // Compare the NRT task against the RT tasks,
 // to see if the time slot has conflict or power cannot be reserved.
 bool RTReservation::findViolationForNode(
-        int id, double power, double now, double cost) {
+    int id, double power, double now, double cost) {
     int s_periods = now / period;
     double s_offset = now - s_periods * period;
     int e_periods = (now + cost) / period;
@@ -261,7 +261,7 @@ bool RTReservation::findViolationForNode(
         }
     }
 
-    if (power < 0) { // Power is not enough!
+    if (power+0.000001 < 0) { // Power is not enough!
         return true;
     }
 

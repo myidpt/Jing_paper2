@@ -141,7 +141,8 @@ ITask * ReservedQ::dispatchNext() {
         // For the RT tasks.
         if (isRealtime) {
             if (NOW != task->getArrivalTime()) {
-                cerr << NOW << " RT task#" << task->getId() << " is delayed!" << endl;
+                cerr << NOW << " RT task#" << task->getId()
+                     << " is delayed!" << endl;
                 fflush(stdout);
                 fflush(stderr);
                 while(true);

@@ -13,6 +13,7 @@ protected:
     int numCMs;
     int numSensors;
 
+    double period;
     IStatus * CMStatus[MAX_CM];
     bool CMSensors[MAX_CM][MAX_SENSORS];
     double averageWorkloads[MAX_SENSORS];
@@ -26,6 +27,9 @@ protected:
     TaskWriter * taskWriter;
 
     cPacket * selfNextTaskTimer;
+
+    double tickCheckerTick;
+    cPacket * selfTickChecker;
 
     cPacket * printStatusTimer;
 
@@ -43,6 +47,7 @@ protected:
     void processTasks();
     void processFinishedTasks(cPacket * packet);
     void printStatus();
+    void processTickChecker();
 
     void sendSafe(int id, cPacket * packet);
 

@@ -17,7 +17,7 @@
 Define_Module(CH);
 
 #define NOW SIMTIME_DBL(simTime())
-//#define DEBUG
+#define DEBUG
 
 void CH::initialize()
 {
@@ -39,7 +39,7 @@ void CH::initialize()
     string statusifilename = par("CM_status_input_filename").stdstringValue();
     string statusofilename = par("CM_status_output_filename").stdstringValue();
     string rttaskifilename = par("CH_rt_task_stats").stdstringValue();
-    double period = par("period").doubleValue();
+    period = par("period").doubleValue();
     double chargeRate = par("chargeRate").doubleValue();
     double maxPower = par("maxPower").doubleValue();
     algorithmName = par("algorithm").stdstringValue();
@@ -107,6 +107,10 @@ void CH::initialize()
     selfNextTaskTimer = new cPacket("TASK_SELF", TASK_SELF);
     // Start to read next task.
     getNextTask();
+
+    tickCheckerTick = 10; // Sec.
+    selfTickChecker = new cPacket("TICK_CHECKER", TICK_CHECKER);
+    processTickChecker();
 }
 
 void CH::handleMessage(cMessage *msg)
@@ -124,6 +128,9 @@ void CH::handleMessage(cMessage *msg)
         break;
     case PRINT_STATUS:
         printStatus();
+        break;
+    case TICK_CHECKER:
+        processTickChecker();
         break;
     default:
         cerr << "CH: packet kind is unrecognizable: " << packet->getKind() << endl;
@@ -226,8 +233,20 @@ void CH::processFinishedTasks(cPacket * packet) {
     delete packet;
 
     if (allTraceRead && queue->isEmpty()) {
+        cout << "allTraceRead && queue is Empty" << endl;
         endSimulation();
     }
+}
+
+void CH::processTickChecker() {
+    double offset = NOW - ((int)(NOW / period) * period);
+    if (offset < period/2) {
+        scheduleAt(NOW + tickCheckerTick, selfTickChecker);
+    }
+    else {
+        scheduleAt((int)(NOW / period + 1) * period, selfTickChecker);
+    }
+    processTasks();
 }
 
 void CH::printStatus() {
@@ -258,6 +277,10 @@ void CH::finish() {
     if (printStatusTimer) {
         cancelAndDelete(printStatusTimer);
         printStatusTimer = NULL;
+    }
+    if (selfTickChecker) {
+        cancelAndDelete(selfTickChecker);
+        selfTickChecker = NULL;
     }
     if (taskWriter) {
         delete taskWriter;

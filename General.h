@@ -6,6 +6,7 @@
 #define TASK_RESP       4 // The task response.
 #define PRINT_STATUS    5 // The status printing timer.
 #define DAY_NIGHT       6 // To trigger the day-night changes.
+#define TICK_CHECKER    7 // Check the CMs for enough power every small period.
 
 #define MAX_CM          1024
 #define MAX_SENSORS     4
