@@ -9,7 +9,7 @@
 #define SIMPLESUBTASK_H_
 
 #include <omnetpp.h>
-#include "ITask.h"
+#include "task/ITask.h"
 #include "status/IStatus.h"
 
 class SimpleSubTask : public ITask {
@@ -26,7 +26,7 @@ protected:
 
     double inputData; // In MB.
     double outputData; // In MB.
-    double maxDelay;
+    double maxLatency;
     bool isdispatched;
 
 public:
@@ -53,7 +53,7 @@ public:
     double getRemainingCost();
     double getRemainingTimeBeforeDeadline();
     double getDeadline();
-    double getMaxDelay();
+    double getMaxLatency();
     ITask * getFatherTask();
     int getServerId();
     void setServerId(int id);

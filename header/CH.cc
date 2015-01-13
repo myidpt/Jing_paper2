@@ -2,6 +2,16 @@
  * Maintain all the status of the CH.
  */
 
+#include <string>
+#include <omnetpp.h>
+#include <list>
+#include "task/SimpleTask.h"
+#include "iostreamer/ostreamer/TaskWriter.h"
+#include "scheduler/IQueue.h"
+#include "scheduler/SimpleQ.h"
+#include "scheduler/PrioritySimpleQ.h"
+#include "scheduler/BalancedQ.h"
+#include "scheduler/ReservedQ.h"
 #include "CH.h"
 
 Define_Module(CH);
@@ -35,13 +45,13 @@ void CH::initialize()
     algorithmName = par("algorithm").stdstringValue();
 
     // Init taskFactory.
-    if (!algorithmName.compare("Reserved")) {
+    if (!algorithmName.compare("Balanced") || !algorithmName.compare("Simple")) {
+        taskFactory = new TaskFactory(nrttaskifilename, ITask::SimpleTaskType);
+    }
+    else {
         taskFactory = new TaskFactory(
                 nrttaskifilename, rttaskifilename,
                 ITask::SimpleTaskType, period);
-    }
-    else {
-        taskFactory = new TaskFactory(nrttaskifilename, ITask::SimpleTaskType);
     }
 
     // Init the average workloads record.
@@ -68,6 +78,12 @@ void CH::initialize()
     }
     else if (!algorithmName.compare("Simple")) {
         queue = new SimpleQ(numCMs, numSensors);
+        queue->setAverageWorkloads(averageWorkloads);
+        queue->setCMSensors(CMSensors);
+        queue->setCMStatus(CMStatus);
+    }
+    else if (!algorithmName.compare("PrioritySimple")) {
+        queue = new PrioritySimpleQ(numCMs, numSensors);
         queue->setAverageWorkloads(averageWorkloads);
         queue->setCMSensors(CMSensors);
         queue->setCMStatus(CMStatus);
@@ -192,7 +208,7 @@ void CH::processTasks() {
 void CH::processFinishedTasks(cPacket * packet) {
     cMsgPar par = packet->par(TASK_PAR);
     ITask * task = (ITask *)(par.pointerValue());
-    ITask * fathertask = task->getFatherTask();
+    SimpleTask * fathertask = (SimpleTask *)(task->getFatherTask());
 
     if (fathertask == NULL) {
         cerr << "Fathertask == NULL." << endl;
@@ -203,7 +219,7 @@ void CH::processFinishedTasks(cPacket * packet) {
          << " from CM#" << task->getServerId() << endl;
 #endif
     if (queue->finishedTask(task)) {
-        taskWriter->writeSimpleTask((SimpleTask *)fathertask);
+        taskWriter->writeSimpleTask(fathertask);
         delete fathertask;
     }
     delete task;
@@ -215,7 +231,6 @@ void CH::processFinishedTasks(cPacket * packet) {
 }
 
 void CH::printStatus() {
-    //cmStatusWriter->writeStatus(CMStatus, numCMs);
     scheduleAt(NOW + printStatusStep, printStatusTimer);
 }
 

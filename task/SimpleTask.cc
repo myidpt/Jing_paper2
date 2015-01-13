@@ -6,13 +6,14 @@
  */
 
 #include "SimpleTask.h"
+#define NOW SIMTIME_DBL(simTime())
 
 int SimpleTask::rtInitId = 10000;
 
 SimpleTask::SimpleTask() {
     subId = 0;
     concurrency = 0;
-    subTasks = new list<ITask *>();
+    outstandingSubTasks = new list<ITask *>();
 }
 
 cObject * SimpleTask::dup() {
@@ -56,15 +57,25 @@ ITask * SimpleTask::createSubTask(int chunks, IStatus * sstatus) {
     subtask->inputData = inputData * chunks / totalSubTasks;
     subtask->outputData = outputData * chunks / totalSubTasks;
     subtask->sensorId = sensorId;
-    subtask->maxDelay = maxDelay;
+    subtask->maxLatency = maxLatency;
     subtask->setServerId(sstatus->getId());
     subtask->realTime = realTime;
+    subtask->setFinishTime(NOW + computeCost);
     concurrency ++;
     sstatus->assignTask(subtask);
 
-    subTasks->push_front(subtask);
+    outstandingSubTasks->push_front(subtask);
 
     return subtask;
+}
+
+void SimpleTask::revertSubTask(SimpleSubTask * task) {
+    if (task->getFatherTask() != this) {
+        cerr << "Task's father task is not this." << endl;
+    }
+    concurrency --;
+    outstandingSubTasks->remove(task);
+    undispatchedSubTasks ++;
 }
 
 ITask * SimpleTask::getFatherTask() {
@@ -96,22 +107,23 @@ double SimpleTask::getRemainingCost() {
 double SimpleTask::getServingWorkload() {
     double remainingCost = 0;
     list<ITask *>::iterator it;
-    for (it = subTasks->begin(); it != subTasks->end(); it ++) {
+    for (it = outstandingSubTasks->begin();
+         it != outstandingSubTasks->end(); it ++) {
         remainingCost += (*it)->getRemainingCost();
     }
     return remainingCost;
 }
 
 double SimpleTask::getRemainingTimeBeforeDeadline() {
-    return maxDelay + arrivalTime - SIMTIME_DBL(simTime());
+    return maxLatency + arrivalTime - SIMTIME_DBL(simTime());
 }
 
 double SimpleTask::getDeadline() {
-    return maxDelay + arrivalTime;
+    return maxLatency + arrivalTime;
 }
 
-double SimpleTask::getMaxDelay() {
-    return maxDelay;
+double SimpleTask::getMaxLatency() {
+    return maxLatency;
 }
 
 int SimpleTask::getServerId() {
@@ -165,7 +177,7 @@ bool SimpleTask::setFinishedSubTask(ITask * task) {
     concurrency --;
     unfinishedSubTasks -= ((SimpleSubTask * )task)->chunks;
 
-    subTasks->remove(task);
+    outstandingSubTasks->remove(task);
     subTaskStats.push_back(
         pair<int, double>(task->getServerId(), task->getServiceTime()));
     if (unfinishedSubTasks < 0) {
@@ -205,7 +217,7 @@ bool SimpleTask::finished() {
 bool SimpleTask::parseTaskString(string & line) {
     if (sscanf(line.c_str(), "%d %lf %d %d %lf %lf %lf %lf",
         &Id, &arrivalTime, &totalSubTasks, &sensorId,
-        &inputData, &outputData, &computeCost, &maxDelay) == 8) {
+        &inputData, &outputData, &computeCost, &maxLatency) == 8) {
         undispatchedSubTasks = totalSubTasks;
         unfinishedSubTasks = totalSubTasks;
 //        printInformation();
@@ -221,12 +233,11 @@ void SimpleTask::set(double time, int num, int sid, double cc) {
     totalSubTasks = num;
     sensorId = sid;
     computeCost = cc;
-    maxDelay = 0;
+    maxLatency = computeCost;
     inputData = 1; // temp
     outputData = 1; // temp
     undispatchedSubTasks = totalSubTasks;
     unfinishedSubTasks = totalSubTasks;
-//    printInformation();
 }
 
 int SimpleTask::getUnfinishedSubTasks() {
@@ -250,20 +261,14 @@ vector<pair<int, double> > SimpleTask::getSubTaskStats() {
 }
 
 void SimpleTask::printInformation() {
-//    cout << "Id = " << Id <<
-//        ", arrivalTime = " << arrivalTime << ", totalSubTasks = " << totalSubTasks <<
-//        ", sensorId = " << sensorId << ", inputData = " << inputData <<
-//        ", outputData = " << outputData << ", computeCost = " << computeCost <<
-//        ", maxDelay = " << maxDelay << endl;
-
     cout << "SimpleTask, Id = " << Id <<
             ", arrivalTime = " << arrivalTime << endl;
 }
 
 SimpleTask::~SimpleTask() {
-    if (subTasks != NULL) {
-        delete subTasks;
-        subTasks = NULL;
+    if (outstandingSubTasks != NULL) {
+        delete outstandingSubTasks;
+        outstandingSubTasks = NULL;
     }
 }
 

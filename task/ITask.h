@@ -36,7 +36,7 @@ public:
     virtual double getOutputData() = 0;
     virtual double getComputeCost() = 0;
     virtual double getRemainingCost() = 0;
-    virtual double getMaxDelay() = 0;
+    virtual double getMaxLatency() = 0;
     virtual double getRemainingTimeBeforeDeadline() = 0;
     virtual double getDeadline() = 0;
     virtual ITask * getFatherTask() = 0;

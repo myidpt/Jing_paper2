@@ -67,22 +67,24 @@ void CM::handleMessage(cMessage *msg)
 }
 
 void CM::processTask(cPacket * packet) {
-    if (taskAtService != NULL) {
-        cMsgPar par = packet->par(TASK_PAR);
-        ITask * task = (ITask *)(par.pointerValue());
-        cerr << "CM #" << myId << ": busy when received new task request id = "
-             << task->getId() << endl;
-        endSimulation();
-        return;
-    }
     cMsgPar par = packet->par(TASK_PAR);
     ITask * task = (ITask *)(par.pointerValue());
+    if (taskAtService != NULL) {
+        cout << "CM #" << myId << ": busy when received new task request id = "
+             << task->getId() << endl;
+        cancelEvent(taskAtService);
+        SimpleSubTask * oldtask =
+            (SimpleSubTask *)(taskAtService->par(TASK_PAR).pointerValue());
+        taskWriter->writeUnfinishedSimpleSubTask(oldtask);
+        delete oldtask;
+    }
     taskAtService = packet;
     packet->setKind(TASK_COMP);
     if (task->getTaskType() == ITask::SimpleSubTaskType) {
         task->setServiceTime(NOW);
-        double timespan = task->getComputeCost() / status->getComputeCap();
-        scheduleAt(SIMTIME_DBL(simTime()) + timespan, packet);
+        double finishtime = NOW + task->getComputeCost() / status->getComputeCap();
+        scheduleAt(finishtime, packet);
+        task->setFinishTime(finishtime);
     }
     else {
         cerr << "CM::processTask: unsupported task type." << endl;
@@ -95,7 +97,6 @@ void CM::processFinishedTask(cPacket * packet) {
     packet->setKind(TASK_RESP);
     cMsgPar par = packet->par(TASK_PAR);
     ITask * task = (ITask *)(par.pointerValue());
-    task->setFinishTime(NOW);
     packet->setBitLength(task->getOutputData() * MB_TO_BIT);
     sendSafe(packet);
     statusWriter->writeStatus(status);

@@ -15,10 +15,15 @@
 
 TaskWriter::TaskWriter(const string & filename) {
     outputfile = new Outputfile(filename);
-    outputfile->writeLine("#ID arrival_time finish_time execution_time sensor_id");
+    outputfile->writeLine(
+        "# SimpleTask: ID atime ftime exetime sensor_id R/N delay");
+    outputfile->writeLine(
+        "# SUB [Server ID]stime <...>");
+    outputfile->writeLine(
+        "# SimpleSubTask: (Unfinished) ID atime ftime exetime sensor_id");
 }
 
-bool TaskWriter::writeSimpleTask(SimpleTask * task) {
+void TaskWriter::writeSimpleTask(SimpleTask * task) {
     char buff[BUFF_SIZE];
     int pos = sprintf(buff, "%d %.2lf %.2lf %.2lf %d",
             task->getId(),
@@ -27,27 +32,33 @@ bool TaskWriter::writeSimpleTask(SimpleTask * task) {
             task->getFinishTime() - task->getArrivalTime(),
             task->getSensorId());
     if (task->realTime) {
-        sprintf(buff + pos, " R");
+        pos += sprintf(buff + pos, " R");
     }
     else {
-        sprintf(buff + pos, " N");
+        pos += sprintf(buff + pos, " N");
     }
+    double delay =
+        task->getFinishTime() - task->getArrivalTime() - task->getMaxLatency();
+    if (delay < 0) {
+        delay = 0;
+    }
+    sprintf(buff + pos, " %.3lf", delay);
     outputfile->writeLine(string(buff));
     vector<pair<int, double> > taskstats = task->getSubTaskStats();
     vector<pair<int, double> >::iterator it;
     int position = sprintf(buff, "SUB ");
     for (it = taskstats.begin(); it != taskstats.end(); it ++) {
-        position += sprintf(buff + position, "[%d]%.2lf,", it->first, it->second);
+        position +=
+            sprintf(buff + position, "[%d]%.2lf,", it->first, it->second);
         if (position > BUFF_SIZE) {
             cerr << "Output buff size not enough! "
                  << position << " > " << BUFF_SIZE << endl;
         }
     }
     outputfile->writeLine(string(buff));
-    return true;
 }
 
-bool TaskWriter::writeSimpleSubTask(SimpleSubTask * task) {
+void TaskWriter::writeSimpleSubTask(SimpleSubTask * task) {
     char buff[200];
     sprintf(buff, "%d %.2lf %.2lf %.2lf %d",
             task->getId(),
@@ -56,7 +67,17 @@ bool TaskWriter::writeSimpleSubTask(SimpleSubTask * task) {
             task->getFinishTime() - task->getArrivalTime(),
             task->getSensorId());
     outputfile->writeLine(string(buff));
-    return true;
+}
+
+void TaskWriter::writeUnfinishedSimpleSubTask(SimpleSubTask * task) {
+    char buff[200];
+    sprintf(buff, "U %d %.2lf %.2lf %.2lf %d",
+            task->getId(),
+            task->getArrivalTime(),
+            task->getFinishTime(),
+            SIMTIME_DBL(simTime()) - task->getArrivalTime(),
+            task->getSensorId());
+    outputfile->writeLine(string(buff));
 }
 
 TaskWriter::~TaskWriter() {

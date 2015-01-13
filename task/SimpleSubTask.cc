@@ -86,16 +86,16 @@ double SimpleSubTask::getRemainingCost() {
     }
 }
 
-double SimpleSubTask::getMaxDelay() {
-    return maxDelay;
+double SimpleSubTask::getMaxLatency() {
+    return maxLatency;
 }
 
 double SimpleSubTask::getRemainingTimeBeforeDeadline() {
-    return maxDelay + arrivalTime - SIMTIME_DBL(simTime());
+    return maxLatency + arrivalTime - SIMTIME_DBL(simTime());
 }
 
 double SimpleSubTask::getDeadline() {
-    return maxDelay + arrivalTime;
+    return maxLatency + arrivalTime;
 }
 
 bool SimpleSubTask::setParameter(int param, double value) {
@@ -120,10 +120,10 @@ bool SimpleSubTask::finished() {
 }
 
 void SimpleSubTask::printInformation() {
-    cout << "Id = " << Id <<
-            ", sensorId = " << sensorId << ", inputData = " << inputData <<
-            ", outputData = " << outputData << ", computeCost = " << computeCost <<
-            ", maxDelay = " << maxDelay << endl;
+    cout << "Id = " << Id
+         << ", sensorId = " << sensorId << ", inputData = " << inputData
+         << ", outputData = " << outputData << ", computeCost = "
+         << computeCost << ", maxLatency = " << maxLatency << endl;
 }
 
 SimpleSubTask::~SimpleSubTask() {

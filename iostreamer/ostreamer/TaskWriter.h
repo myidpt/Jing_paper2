@@ -22,8 +22,9 @@ protected:
     Outputfile * outputfile;
 public:
     TaskWriter(const string & filename);
-    bool writeSimpleTask(SimpleTask * task);
-    bool writeSimpleSubTask(SimpleSubTask * task);
+    void writeSimpleTask(SimpleTask * task);
+    void writeSimpleSubTask(SimpleSubTask * task);
+    void writeUnfinishedSimpleSubTask(SimpleSubTask * task);
     virtual ~TaskWriter();
 };
 

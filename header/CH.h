@@ -2,18 +2,10 @@
 #define __JINGQIN_CH_H_
 
 #include <string>
-#include <omnetpp.h>
-#include <list>
 #include "General.h"
-#include "task/SimpleTask.h"
-#include "iostreamer/ostreamer/TaskWriter.h"
-#include "iostreamer/ostreamer/StatusWriter.h"
 #include "task/TaskFactory.h"
 #include "status/StatusFactory.h"
 #include "scheduler/IQueue.h"
-#include "scheduler/SimpleQ.h"
-#include "scheduler/BalancedQ.h"
-#include "scheduler/ReservedQ.h"
 
 class CH : public cSimpleModule
 {

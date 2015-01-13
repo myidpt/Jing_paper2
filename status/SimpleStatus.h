@@ -29,11 +29,12 @@ protected:
     double power;
     double lastPowerUpdateTime;
     ITask * currentTask;
+    ITask * finishedTask;
     double period;
     double chargeRate;
     double maxPower;
-    double idleTime;
-    SimpleStatus(double, double, double); // A Status can only be created by the statusFactory method.
+    // A Status can only be created by the statusFactory method.
+    SimpleStatus(double, double, double);
     void updatePower(double now);
 public:
     cObject * dup();
@@ -43,6 +44,7 @@ public:
     double getComputeCap();
     double getPower();
     void assignTask(ITask * task);
+    ITask * getTask();
     void taskFinish();
     double getRemainingCost();
     double predictExecutionTime(double cost);

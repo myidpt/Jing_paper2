@@ -25,10 +25,12 @@ public:
     virtual double getComputeCap() = 0;
     virtual double getPower() = 0;
     virtual void assignTask(ITask * task) = 0;
+    virtual ITask * getTask() = 0;
     virtual void taskFinish() = 0;
     virtual bool isBusy() = 0;
     virtual bool isDead() = 0;
     virtual bool isAvailable() = 0; // It must be free & alive
+    // It must be free & alive, finished at the time, but task not nullified.
     virtual double getRemainingCost() = 0;
     virtual double predictExecutionTime(double cost) = 0;
     virtual bool hasSensor(int sid) = 0;

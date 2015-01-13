@@ -29,13 +29,13 @@ protected:
     double inputData;
     double outputData;
     double computeCost;
-    double maxDelay;
+    double maxLatency;
     int undispatchedSubTasks;
     int unfinishedSubTasks;
     int subId;
     int paradegree; // target concurrency
     int concurrency; // current concurrency
-    list<ITask * > * subTasks;
+    list<ITask * > * outstandingSubTasks;
     vector<pair<int, double> > subTaskStats; // CM, start time
 
     SimpleTask();
@@ -64,6 +64,8 @@ public:
     double getFinishTime();
     void setFinishTime(double);
     ITask * createSubTask(int num, IStatus * server);
+    // The service is interrupted.
+    void revertSubTask(SimpleSubTask * task);
     ITask * getFatherTask();
     ITask::TaskType getTaskType();
     double getInputData();
@@ -73,7 +75,7 @@ public:
     double getServingWorkload();
     double getRemainingTimeBeforeDeadline();
     double getDeadline();
-    double getMaxDelay();
+    double getMaxLatency();
     int getServerId();
     void setServerId(int id);
     int getDegree();

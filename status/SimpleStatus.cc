@@ -5,19 +5,21 @@
  *      Author: yonggang
  */
 
-#define CHECK_POWER(id) \
-    do {if (power < 0) cerr << "Status#" << (id) << ": Power is below 0" << endl; \
-    else if (power > maxPower) power = maxPower; break;} while(true);
-
 #include <assert.h>
 #include "SimpleStatus.h"
 #include "SimpleSubTask.h"
+
+#define NOW SIMTIME_DBL(simTime())
+#define CHECK_POWER(id) \
+    do {if (power < 0) cerr << "Status#" << (id) << ": Power is below 0" << endl; \
+    else if (power > maxPower) power = maxPower; break;} while(true);
 
 int SimpleStatus::initId = 0;
 
 SimpleStatus::SimpleStatus(double p, double cr, double maxp)
 :myId(initId ++), computeCap(-1), power(-1), lastPowerUpdateTime(0),
- currentTask(NULL), period(p), chargeRate(cr), maxPower(maxp) {
+ currentTask(NULL), finishedTask(NULL), period(p), chargeRate(cr),
+ maxPower(maxp) {
     for (int i = 0; i < MAX_SENSORS; i ++) {
         sensors[i] = false;
         sensorCosts[i] = -1;
@@ -80,14 +82,11 @@ void SimpleStatus::updatePower(double now) {
         double night_dis_rate = sensorCosts[currentTask->getSensorId()];
         double day_dis_rate = night_dis_rate - chargeRate;
 
-        //cout << "n=" << night_dis_rate << ", d=" << day_dis_rate << endl;
         int l_periods = lastPowerUpdateTime / period;
         double l_offset = lastPowerUpdateTime - l_periods * period;
         int n_periods = now / period;
         double n_offset = now - n_periods * period;
 
-        //cout << "l_p=" << l_periods << ", l_o=" << l_offset
-        //     << ", n_p=" << n_periods << ", n_o=" << n_offset << endl;
         if(n_offset <= period/2) {
             if(l_offset > n_offset) { // l_offset is at night.
                 power -= night_dis_rate * (period - l_offset);
@@ -118,20 +117,40 @@ void SimpleStatus::updatePower(double now) {
 
 // Update the power at this time point
 double SimpleStatus::getPower() {
-    updatePower(SIMTIME_DBL(simTime()));
+    updatePower(NOW);
     return power;
 }
 
 void SimpleStatus::assignTask(ITask * task) {
-    updatePower(SIMTIME_DBL(simTime()));
+    updatePower(NOW);
+    if (currentTask != NULL) {
+        if (currentTask->getFinishTime() == NOW) {
+            cout << "RT Task queued on status." << endl;
+            finishedTask = task;
+        }
+        else if (currentTask->realTime) {
+            cerr << NOW << " ERROR: RT Task#" << task->getId()
+                 << " execution interrupted: Task will finish at "
+                 << task->getFinishTime() << endl;
+        }
+        // The current task is wiped out from status if it is not finished.
+    }
     currentTask = task;
-    idleTime = SIMTIME_DBL(simTime()) + task->getComputeCost() / computeCap;
+}
+
+ITask * SimpleStatus::getTask() {
+    return currentTask;
 }
 
 void SimpleStatus::taskFinish() {
-    updatePower(SIMTIME_DBL(simTime()));
-    currentTask = NULL;
-    idleTime = 0;
+    updatePower(NOW);
+    if (finishedTask != NULL) { // Deal with the queuing order.
+        finishedTask = NULL;
+        // Don't nullify currentTask, it may be assigned with new task.
+    }
+    else {
+        currentTask = NULL;
+    }
 }
 
 bool SimpleStatus::isBusy() {
@@ -160,18 +179,29 @@ bool SimpleStatus::isAvailable() {
     if (power > 0 && currentTask == NULL) {
         return true;
     }
+    else if (power > 0 && currentTask != NULL
+        && currentTask->getFinishTime() == NOW) {
+        finishedTask = currentTask;
+        currentTask = NULL;
+        return true;
+    }
     else {
         return false;
     }
 }
 
 double SimpleStatus::getRemainingCost() {
-    if (currentTask == NULL) {
+    if (finishedTask != NULL) {
+        return 0;
+    }
+    else if (currentTask != NULL) {
+        return currentTask->getComputeCost()
+            - ((NOW - currentTask->getServiceTime()) * computeCap);
+    }
+    else {
         cerr << "Error: getRemainingCost" << endl;
         return 0;
     }
-    return currentTask->getComputeCost()
-        - ((SIMTIME_DBL(simTime()) - currentTask->getServiceTime()) * computeCap);
 }
 
 double SimpleStatus::predictExecutionTime(double cost) {
