@@ -12,7 +12,11 @@
 #define NOW SIMTIME_DBL(simTime())
 #define CHECK_POWER(id) \
     do {if (power < 0) cerr << "Status#" << (id) << ": Power is below 0" << endl; \
-    else if (power > maxPower) power = maxPower; break;} while(true);
+    else if (power > maxPower) power = maxPower;} while(false);
+
+#define TEST_POWER_RETURN \
+    do {if (test_power < 0) return false; \
+    else if (test_power > maxPower) test_power = maxPower;} while(false);
 
 int SimpleStatus::initId = 0;
 
@@ -206,6 +210,52 @@ double SimpleStatus::getRemainingCost() {
 
 double SimpleStatus::predictExecutionTime(double cost) {
     return cost / computeCap;
+}
+
+// Note: hasPowerToRun() does not check if the node already has task running.
+// For NRT tasks running, RT tasks can preempt them.
+bool SimpleStatus::hasPowerToRun(int sid, double cost) {
+    updatePower(NOW);
+
+    // Assume a subtask's execution time never exceeds 1/2 period.
+    double night_dis_rate = sensorCosts[sid];
+    double day_dis_rate = sensorCosts[sid] - chargeRate;
+
+    int s_periods = NOW / period;
+    double s_offset = NOW - s_periods * period;
+    double ftime = NOW + cost / sensorCosts[sid];
+    int e_periods = ftime / period;
+    double e_offset = ftime - e_periods * period;
+
+    double test_power = power;
+    cout << "test_power=" << test_power << endl;
+    cout << "s_p=" << s_periods << ", s_o=" << s_offset
+         << ", e_p=" << e_periods << ", e_o=" << e_offset << endl;
+    if(e_offset <= period/2) {
+        if(s_offset > e_offset) { // s_offset is at night.
+            test_power -= night_dis_rate * (period - s_offset);
+            TEST_POWER_RETURN
+            test_power -= day_dis_rate * e_offset;
+            TEST_POWER_RETURN
+        }
+        else {
+            test_power -= day_dis_rate * (e_offset - s_offset);
+            TEST_POWER_RETURN
+        }
+    }
+    else {
+        if(s_offset < period/2) {
+            test_power -= day_dis_rate * (period/2 - s_offset);
+            TEST_POWER_RETURN
+            test_power -= night_dis_rate * (e_offset - period/2);
+            TEST_POWER_RETURN
+        }
+        else {
+            test_power -= night_dis_rate * (e_offset - s_offset);
+            TEST_POWER_RETURN
+        }
+    }
+    return true;
 }
 
 // Incomplete

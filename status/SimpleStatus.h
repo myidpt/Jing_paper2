@@ -52,6 +52,7 @@ public:
     bool isDead();
     bool isAvailable();
     bool hasSensor(int sid);
+    bool hasPowerToRun(int sid, double cost);
 
 //    string genStatusString();
     bool parseStatusString(const string & str);

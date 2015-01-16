@@ -34,6 +34,7 @@ public:
     virtual double getRemainingCost() = 0;
     virtual double predictExecutionTime(double cost) = 0;
     virtual bool hasSensor(int sid) = 0;
+    virtual bool hasPowerToRun(int sid, double cost) = 0;
 //    string genStatusString();
     virtual bool parseStatusString(const string & str) = 0;
     virtual void printInformation() = 0; // For debugging.

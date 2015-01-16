@@ -34,7 +34,7 @@ protected:
     list<ITask *> * nrtTaskQ;
     IMF * imfCalculator;
 
-    int assignNodeForRT(int sid, multimap<double, int> * imfmap);
+    int assignNodeForRT(int sid, double cost, multimap<double, int> * imfmap);
 
 public:
     PrioritySimpleQ(int, int);

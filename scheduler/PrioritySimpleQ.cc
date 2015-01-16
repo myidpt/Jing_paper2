@@ -112,6 +112,7 @@ ITask * PrioritySimpleQ::dispatchNext() {
             continue;
         }
         int sensorid = task->getSensorId();
+        double cost = task->getSubTaskCost();
         // Get the required sensor ID of the task.
 
         if (task->getRemainingCost() == 0) {
@@ -130,7 +131,7 @@ ITask * PrioritySimpleQ::dispatchNext() {
                 fflush(stdout);
                 fflush(stderr);
             }
-            int id = assignNodeForRT(task->getSensorId(), &imfmap);
+            int id = assignNodeForRT(sensorid, cost, &imfmap);
             if (id == -1) {
                 continue;
             }
@@ -138,10 +139,12 @@ ITask * PrioritySimpleQ::dispatchNext() {
             // CMStatus is also updated.
         }
 
+        // For the NRT tasks.
         for (imfit = imfmap.begin(); imfit != imfmap.end(); imfit ++) {
             int nodeid = imfit->second;
             if (CMStatus[nodeid]->isAvailable()
-                && CMStatus[nodeid]->hasSensor(sensorid)) {
+                && CMStatus[nodeid]->hasSensor(sensorid)
+                && CMStatus[nodeid]->hasPowerToRun(sensorid, cost)) {
                 // The CM is idle, has the sensor.
                 // CMStatus is updated in sreateSubTask.
                 return task->createSubTask(1, CMStatus[nodeid]);
@@ -151,14 +154,16 @@ ITask * PrioritySimpleQ::dispatchNext() {
     return NULL;
 }
 
-int PrioritySimpleQ::assignNodeForRT(int sid, multimap<double, int> * imfmap) {
+int PrioritySimpleQ::assignNodeForRT(
+    int sid, double cost, multimap<double, int> * imfmap) {
     // First find the idle nodes
     // (ones that finish at the time but are later in the queue).
     multimap<double, int>::iterator imfit;
     for (imfit = imfmap->begin(); imfit != imfmap->end(); imfit ++) {
         int nodeid = imfit->second;
         if (CMStatus[nodeid]->hasSensor(sid)
-            && CMStatus[nodeid]->isAvailable()) {
+            && CMStatus[nodeid]->isAvailable()
+            && CMStatus[nodeid]->hasPowerToRun(sid, cost)) {
             return nodeid;
         }
     }
@@ -167,6 +172,7 @@ int PrioritySimpleQ::assignNodeForRT(int sid, multimap<double, int> * imfmap) {
     for (imfit = imfmap->begin(); imfit != imfmap->end(); imfit ++) {
         int nodeid = imfit->second;
         if (CMStatus[nodeid]->hasSensor(sid)
+            && CMStatus[nodeid]->hasPowerToRun(sid, cost)
             && CMStatus[nodeid]->getTask() != NULL) {
             SimpleSubTask * curtask =
                 (SimpleSubTask *)(CMStatus[nodeid]->getTask());
