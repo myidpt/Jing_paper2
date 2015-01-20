@@ -19,7 +19,8 @@ using namespace std;
 class RTReservation {
 public:
     typedef set<int> Nodeset;
-    typedef map<double, double> PThresholds; // Power thresholds.
+    typedef pair<double, double> PThreshold; // power threshold, span.
+    typedef map<double, PThreshold *> PThresholds; // time, power thresholds.
     typedef struct RTTask {
         int scale;
         double span;
@@ -38,6 +39,8 @@ protected:
     map<double, Nodeset *>* allocations[MAX_SENSORS];
     // For evaluating the power.
     map<int, PThresholds *>* nodesPThresholds;
+    double startPThresholds[MAX_CM]; // The PThreshold at time 0 in a period.
+    double initialPower[MAX_CM]; // The initial power of each node.
 
     // For tracking the allocation of nodes to RT tasks.
     int rtNodeAssignTracker[MAX_SENSORS][MAX_CM];
@@ -47,9 +50,13 @@ protected:
     IMF * imfCalculator;
 
     inline bool powerAchievable(double time, double power);
+    inline bool wrapPThreshold(int nodeid, double task_time, double task_span,
+        double task_th, double gap, PThresholds ** eths);
     inline map<double, RTTask *> * readFile(const char  * filename);
-    inline void getWorkloads(map<double, RTTask *> * tasks, double workloads[]);
-    inline double constructPThreshold(double, double, double, double);
+    inline void getWorkloads(
+        map<double, RTTask *> * tasks, double workloads[]);
+    inline double constructPThreshold(
+        int, double, double, double, double, PThresholds ** eths);
     // Validate whether the power is achievable if charged from beginning.
     inline void printReservation();
 public:

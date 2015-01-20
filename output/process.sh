@@ -2,6 +2,13 @@
 
 step=300
 
+echo 'process.sh can generate:'
+echo '  tasks.R: Entire task log for RT tasks'
+echo '  tasks.N: Entire task log for NRT tasks'
+echo '  power: Total system power log'
+echo '  taskcost: Total cost of all tasks'
+echo 'process.sh calls getStatus.py and getStatus2.py'
+
 grep -v "SUB" tasks > tasks.thin
 grep "R" tasks.thin > tasks.R
 grep "N" tasks.thin > tasks.N

@@ -17,7 +17,7 @@
 Define_Module(CH);
 
 #define NOW SIMTIME_DBL(simTime())
-#define DEBUG
+//#define DEBUG
 
 void CH::initialize()
 {

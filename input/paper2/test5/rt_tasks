@@ -1,0 +1,7 @@
+# arrival_time_in_each_period rt_task_number cost resource_type
+0 1 1350 0
+1000 2 20 0
+1350 1 1350 0
+2000 3 30 0
+2700 1 1350 0
+4050 1 1350 0

@@ -19,6 +19,9 @@ using namespace std;
 RTReservation::RTReservation(int numcms, int numsensors, int p, double cr)
 : numCMs(numcms), numSensors(numsensors), period(p), chargeRate(cr) {
     imfCalculator = new IMF(numcms, numsensors);
+    for (int i = 0; i < numCMs; i ++) {
+        startPThresholds[i] = 0;
+    }
 }
 
 void RTReservation::setStatus(IStatus * status[]) {
@@ -27,6 +30,7 @@ void RTReservation::setStatus(IStatus * status[]) {
             break;
         }
         status[i]->getSensors(CMSensors[i]);
+        initialPower[i] = status[i]->getPower(); // At time 0.
     }
     imfCalculator->setCMSensors(CMSensors);
 }
@@ -35,7 +39,98 @@ bool RTReservation::powerAchievable(double time, double power) {
     return ((time > period/2)? period/2 : time) * chargeRate > power;
 }
 
-map<double, RTReservation::RTTask *> * RTReservation::readFile(const char  * filename) {
+bool RTReservation::wrapPThreshold(
+        int nodeid, double task_time, double task_span, double task_th,
+        double gap, RTReservation::PThresholds ** pths) {
+    cout << "Wrap " << nodeid << "," << task_time << "," << task_th
+         << "," << gap << endl;
+    fflush(stdout);
+    if (gap > initialPower[nodeid]) {
+        return false;
+    }
+    double last_time = period;
+    double last_th = startPThresholds[nodeid] + gap;
+    PThresholds * old_pths = *pths;
+    PThresholds * new_pths = new PThresholds;
+    PThresholds::reverse_iterator it = old_pths->rbegin();
+    int step = 0;
+    // step == 0: current is in list.
+    // step == 1: current is the task.
+    while (true) {
+        double cur_time;
+        double cur_th;
+        double cur_span;
+        if (it == old_pths->rend()) {
+            if (step == 0) {
+                cur_time = task_time;
+                cur_th = task_th;
+                cur_span = task_span;
+                step ++;
+            }
+            else {
+                break;
+            }
+        }
+        else {
+            cur_time = it->first;
+            cur_th = it->second->first;
+            cur_span = it->second->second;
+            // Need to recalculate the PThresholds.
+            PThreshold * new_pth = new PThreshold;
+            new_pth->second = cur_span;
+            new_pth->first = cur_th + gap;
+            new_pths->insert(pair<double, PThreshold *>(cur_time, new_pth));
+            it ++;
+        }
+        cout << cur_time << " " << cur_th << " " << cur_span << endl;
+
+        double cur_end_time = cur_time + cur_span;
+        double idle_charge = 0;
+        if (cur_end_time < period/2) {
+            if (last_time > period/2) {
+                idle_charge = (period/2 - cur_end_time) * chargeRate;
+            }
+            else {
+                idle_charge = (last_time - cur_end_time) * chargeRate;
+            }
+        }
+        // extra_charge is the extra charge not required by last_th.
+        double extra_charge = idle_charge - last_th;
+        cout << "ext_ch=" << extra_charge << "," << idle_charge << ","
+             << last_th << endl;
+        if (extra_charge + 0.00001 > 0) {
+            gap -= extra_charge;
+            if (gap - 0.00001 < 0) {
+                gap = 0;
+            }
+        }
+
+        cout << "gap=" << gap << endl;
+        fflush(stdout);
+        last_time = cur_time;
+        last_th = cur_th;
+    }
+    if (gap == 0) {
+        *pths = new_pths;
+        delete old_pths;
+        startPThresholds[nodeid] += gap;
+        cout << "Wrap out true." << endl;
+        for (PThresholds::iterator nit = (*pths)->begin(); nit != (*pths)->end(); nit ++) {
+            cout << nit->first << " " << nit->second->first << " "
+                 << nit->second->second << endl;
+        }
+        fflush(stdout);
+        return true;
+    }
+    else {
+        cout << "Wrap out false." << endl;
+        fflush(stdout);
+        return false;
+    }
+}
+
+map<double, RTReservation::RTTask *> * RTReservation::readFile(
+    const char  * filename) {
     map<double, RTTask *> * tasks = new map<double, RTTask *>();
     Inputfile inputfile(filename);
     string line;
@@ -65,7 +160,8 @@ void RTReservation::getWorkloads(map<double, RTTask *> * tasks, double workloads
 }
 
 double RTReservation::constructPThreshold(
-        double task_time, double task_span, double next_time, double next_th) {
+        int nodeid, double task_time, double task_span, double next_time,
+        double next_th, RTReservation::PThresholds ** eths) {
     double new_th = next_th; // The power threshold with the new subtask.
     double cost;
     double idleCharge = 0;
@@ -92,11 +188,26 @@ double RTReservation::constructPThreshold(
         new_th = 0;
     }
     new_th += cost;
-    if (powerAchievable(task_time, new_th)) {
+    double init_charged_power = startPThresholds[nodeid];
+    if (task_time > period/2) {
+        init_charged_power += period/2 * chargeRate;
+    }
+    else {
+        init_charged_power += task_time * chargeRate;
+    }
+
+    double gap = new_th - init_charged_power;
+    if (gap - 0.00001 <= 0) { // Can be charged from beginning.
         return new_th;
     }
-    else { // We may need a new node for more power.
-        return -1;
+    else {
+        if (wrapPThreshold(nodeid, task_time, task_span, new_th, gap, eths)) {
+            // eths can be changed!
+            return new_th;
+        }
+        else { // We may need a new node for more power.
+            return -1;
+        }
     }
 }
 
@@ -130,7 +241,7 @@ void RTReservation::makeReservation(const char  * filename) {
     // and allocate tasks to the nodes according to the imf.
     map<double, RTTask *>::reverse_iterator taskit;
     for (taskit = tasks->rbegin(); taskit != tasks->rend(); taskit ++) {
-        // For all realtime tasks.
+        // For all RT tasks.
         double task_time = taskit->first;
         double task_scale = taskit->second->scale;
         double task_span = taskit->second->span;
@@ -147,7 +258,7 @@ void RTReservation::makeReservation(const char  * filename) {
         for (int subtask = 0; subtask < task_scale;) {
             // For the subtasks.
             if (imfit == imf.end()) {
-                cerr << "Not enough nodes for the realtime tasks!" << endl;
+                cerr << "Not enough nodes for the RT tasks!" << endl;
                 printReservation();
                 return;
             }
@@ -170,7 +281,7 @@ void RTReservation::makeReservation(const char  * filename) {
             // Above are default values, i.e., they are equal to no threshold.
             if (eth->begin() != eth->end()) { // PThresholds is not empty.
                 th_time = eth->begin()->first;
-                th_th = eth->begin()->second;
+                th_th = eth->begin()->second->first;
                 if (th_time < task_time + task_span) { // Time overlap!
                     imfit ++;
                     continue;
@@ -178,9 +289,11 @@ void RTReservation::makeReservation(const char  * filename) {
             }
             // Calculate the PThreshold for the new subtask.
             double new_th = constructPThreshold(
-                    task_time, task_span, th_time, th_th);
+                    nodeid, task_time, task_span, th_time, th_th,
+                    &(nodeit->second));
             if (new_th >= 0) { // This means the subtask can be assigned here.
-                eth->insert(pair<double, double>(task_time, new_th));
+                nodeit->second->insert(pair<double, PThreshold *>(
+                        task_time, new PThreshold(new_th, task_span)));
                 map<double, Nodeset *>::iterator ait =
                         allocations[task_type]->find(task_time);
                 Nodeset * ns;
@@ -205,13 +318,14 @@ void RTReservation::makeReservation(const char  * filename) {
 
 void RTReservation::printReservation() {
     map<int, PThresholds *>::iterator itet = nodesPThresholds->begin();
-    cout << "Node ethresholds:" << endl;
+    cout << "Node PThresholds:" << endl;
     for (; itet != nodesPThresholds->end(); itet ++) {
         cout << "Node#" << itet->first << ": ";
-        PThresholds * eths = itet->second;
-        PThresholds::iterator ethsit = eths->begin();
-        for (; ethsit != eths->end(); ethsit ++) {
-            cout << "[" << ethsit->first << "," << ethsit->second << "]";
+        PThresholds * pths = itet->second;
+        PThresholds::iterator pthsit = pths->begin();
+        for (; pthsit != pths->end(); pthsit ++) {
+            cout << "[" << pthsit->first << "," << pthsit->second->first
+                 << "," << pthsit->second->second << "]";
         }
         cout << endl;
     }
@@ -270,8 +384,8 @@ bool RTReservation::findViolationForNode(
         cerr << "Cannot find node#" << id << " in nodesPThresholds." << endl;
         return false;
     }
-    map<double, double> * pThresholds = it->second;
-    map<double, double>::iterator ptit;
+    PThresholds * pThresholds = it->second;
+    PThresholds::iterator ptit;
     double rtt_offset;
     double rtt_power;
     // Find time interference.
@@ -281,7 +395,7 @@ bool RTReservation::findViolationForNode(
     for (ptit = pThresholds->begin(); ptit != pThresholds->end(); ++ ptit) {
         if (s_offset <= ptit->first) {
             rtt_offset = ptit->first;
-            rtt_power = ptit->second;
+            rtt_power = ptit->second->first;
             break;
         }
     }
@@ -290,7 +404,7 @@ bool RTReservation::findViolationForNode(
             // The NRT task s_offet is larger than all RT tasks,
             // then verify against the first RT task.
             rtt_offset = pThresholds->begin()->first;
-            rtt_power = pThresholds->begin()->second;
+            rtt_power = pThresholds->begin()->second->first;
         }
         else { // No RT task on this node.
             return false;
@@ -339,7 +453,7 @@ int RTReservation::assignNodeForRT(double time, int type) {
     double phase_time = time - (int)(time / period) * period;
     map<double, Nodeset *>::iterator ait = allocations[type]->find(phase_time);
     if (ait == allocations[type]->end()) {
-        cerr << "Cannot find Time " << phase_time << " in RT allocations." << endl;
+        cerr << "Cannot find time " << phase_time << " in RT allocations." << endl;
         return -1;
     }
     // Copy all server IDs from allocations to rtNodeAssignTracker.

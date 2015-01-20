@@ -14,11 +14,11 @@ f.write('# Id time num_sub sensor input output compute QoS_latency\n')
 
 id = 0
 time = 0
-compute = 3200
-num = 32
+compute = 25600
+num = 64
 delay = 1600
 
-ave = 100
+ave = 1600
 
 def gen_time():
   return time - ave * logn(e, 1-random.random())

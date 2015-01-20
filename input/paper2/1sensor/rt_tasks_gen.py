@@ -14,7 +14,7 @@ id = 0
 time = 0
 cost = 25600
 num = 64
-step = 300
+step = 675
 
 def gen_time():
   return time + step
