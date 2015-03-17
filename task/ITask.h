@@ -43,6 +43,7 @@ public:
     virtual int getServerId() = 0;
     virtual void setServerId(int id) = 0;
     virtual int getTotalSubTasks();
+    virtual bool cancelDelayedSubTasks();
 
     virtual cObject * dup() = 0;
     virtual bool setParameter(int param, double value) = 0;

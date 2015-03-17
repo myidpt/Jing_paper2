@@ -129,7 +129,6 @@ void SimpleStatus::assignTask(ITask * task) {
     updatePower(NOW);
     if (currentTask != NULL) {
         if (currentTask->getFinishTime() == NOW) {
-            cout << "RT Task queued on status." << endl;
             finishedTask = task;
         }
         else if (currentTask->realTime) {
@@ -203,7 +202,8 @@ double SimpleStatus::getRemainingCost() {
             - ((NOW - currentTask->getServiceTime()) * computeCap);
     }
     else {
-        cerr << "Error: getRemainingCost" << endl;
+        cerr << "Error! getRemainingCost: finishedTask"
+             << " and currentTask are both NULL." << endl;
         return 0;
     }
 }
@@ -228,9 +228,6 @@ bool SimpleStatus::hasPowerToRun(int sid, double cost) {
     double e_offset = ftime - e_periods * period;
 
     double test_power = power;
-    cout << "test_power=" << test_power << endl;
-    cout << "s_p=" << s_periods << ", s_o=" << s_offset
-         << ", e_p=" << e_periods << ", e_o=" << e_offset << endl;
     if(e_offset <= period/2) {
         if(s_offset > e_offset) { // s_offset is at night.
             test_power -= night_dis_rate * (period - s_offset);

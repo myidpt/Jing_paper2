@@ -28,6 +28,11 @@ int ITask::getTotalSubTasks() {
     return 0;
 }
 
+bool ITask::cancelDelayedSubTasks() {
+    cout << "cancelDelayedSubTasks() is undefined." << endl;
+    return false;
+}
+
 ITask::~ITask() {
 }
 

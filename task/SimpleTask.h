@@ -15,6 +15,7 @@
 #include "ITask.h"
 #include "SimpleSubTask.h"
 #include "status/IStatus.h"
+#include "iostreamer/ostreamer/Outputfile.h"
 
 using namespace std;
 
@@ -32,13 +33,15 @@ protected:
     double maxLatency;
     int undispatchedSubTasks;
     int unfinishedSubTasks;
+    int canceledSubTasks;
     int subId;
     int paradegree; // target concurrency
     int concurrency; // current concurrency
     list<ITask * > * outstandingSubTasks;
     vector<pair<int, double> > subTaskStats; // CM, start time
+    Outputfile * outputfile;
 
-    SimpleTask();
+    SimpleTask(Outputfile * taskWriter);
 public:
     enum Parameter {
         TOTAL_SUBTASKS, // From input.
@@ -84,6 +87,10 @@ public:
     int getSubTaskCost();
     int getConcurrency();
     int getTotalSubTasks();
+    bool cancelDelayedSubTasks();
+    int getCanceledTasks();
+    void writeOut();
+    Outputfile * getTaskWriter();
 
     bool setParameter(int param, double value);
     double getParameter(int param);

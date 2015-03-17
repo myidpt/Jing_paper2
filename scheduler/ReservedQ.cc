@@ -187,6 +187,7 @@ ITask * ReservedQ::dispatchNext() {
     return NULL;
 }
 
+// Write out and delete father task here.
 bool ReservedQ::finishedTask(ITask * task) {
     SimpleTask * fathertask = (SimpleTask *)(task->getFatherTask());
     int cmid = task->getServerId();
@@ -199,6 +200,8 @@ bool ReservedQ::finishedTask(ITask * task) {
         else {
             nrtTaskQ->remove(fathertask);
         }
+        fathertask->writeOut();
+        delete fathertask;
         return true;
     }
     else {

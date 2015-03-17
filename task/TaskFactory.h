@@ -12,6 +12,7 @@
 #include <map>
 #include "General.h"
 #include "iostreamer/istreamer/Inputfile.h"
+#include "iostreamer/ostreamer/Outputfile.h"
 #include "ITask.h"
 #include "SimpleTask.h"
 
@@ -42,6 +43,8 @@ protected:
     Inputfile * nrt_inputfile;
     map<double, RTTask> rtTasks;
     map<double, RTTask>::iterator rtTaskIt;
+    Outputfile * outputfile;
+
 
     bool initialAverageWorkloadsAvailable;
     double initialAverageWorkloads[MAX_SENSORS];
@@ -51,8 +54,10 @@ protected:
     void getRTTask();
     void getNRTTask();
 public:
-    TaskFactory(const string & filename, ITask::TaskType type);
-    TaskFactory(const string &, const string &, ITask::TaskType, double);
+    TaskFactory(const string & filename, ITask::TaskType type,
+            Outputfile * writer);
+    TaskFactory(const string &, const string &, ITask::TaskType, double period,
+            Outputfile * writer);
     bool getInitialAverageWorkloads(double workloads[]);
     bool getBucketMaxCapRatios(double ratios[]);
     ITask * createTask();

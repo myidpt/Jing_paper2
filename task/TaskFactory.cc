@@ -7,19 +7,28 @@
 
 #include <map>
 #include "TaskFactory.h"
+#include "iostreamer/istreamer/Inputfile.h"
+#include "iostreamer/ostreamer/Outputfile.h"
 
 using namespace std;
 
-TaskFactory::TaskFactory(const string & filename, ITask::TaskType type)
-: myTaskType(type), nextNRTTask (NULL) {
+TaskFactory::TaskFactory(
+        const string & filename, ITask::TaskType type, Outputfile * file)
+: myTaskType(type), nextNRTTask(NULL), outputfile(file) {
     parseNRTInputFile(filename);
 }
 
 TaskFactory::TaskFactory(
-        const string & filename1, const string & filename2, ITask::TaskType type, double p)
-: myTaskType(type), nextNRTTask (NULL), nextRTTask(NULL), period(p), periods(0) {
+        const string & filename1, const string & filename2,
+        ITask::TaskType type, double p, Outputfile * file)
+: myTaskType(type), nextNRTTask (NULL), nextRTTask(NULL), period(p),
+  periods(0), outputfile(file) {
     parseNRTInputFile(filename1);
     parseRTInputFile(filename2);
+    outputfile->writeLine(
+        "# SimpleTask: ID atime ftime exetime sensor_id cancelled_subtasks R/N delay");
+    outputfile->writeLine(
+        "# SUB [Server ID]stime <...>");
 }
 
 void TaskFactory::parseRTInputFile(const string& filename) {
@@ -99,7 +108,7 @@ void TaskFactory::getRTTask() {
     RTTask task = rtTaskIt->second;
     rtTaskIt++;
 
-    nextRTTask = new SimpleTask();
+    nextRTTask = new SimpleTask(outputfile);
     nextRTTask->realTime = true;
     nextRTTask->set(task.time + periods, task.num, task.type, task.cost);
 }
@@ -107,7 +116,7 @@ void TaskFactory::getRTTask() {
 void TaskFactory::getNRTTask() {
     string str;
     if (nrt_inputfile->readNextLine(str)) {
-        nextNRTTask = new SimpleTask();
+        nextNRTTask = new SimpleTask(outputfile);
         nextNRTTask->realTime = false;
         if(!nextNRTTask->parseTaskString(str)) {
             delete nextNRTTask;

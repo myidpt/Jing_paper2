@@ -6,6 +6,7 @@
 #include "task/TaskFactory.h"
 #include "status/StatusFactory.h"
 #include "scheduler/IQueue.h"
+#include "iostreamer/ostreamer/Outputfile.h"
 
 class CH : public cSimpleModule
 {
@@ -24,7 +25,7 @@ protected:
     TaskFactory * taskFactory;
     StatusFactory * statusFactory;
 
-    TaskWriter * taskWriter;
+    Outputfile * outputfile;
 
     cPacket * selfNextTaskTimer;
 

@@ -126,13 +126,13 @@ ITask * PrioritySimpleQ::dispatchNext() {
         // For the RT tasks.
         if (isRealtime) {
             if (NOW != task->getArrivalTime()) {
-                cerr << NOW << " RT task#" << task->getId()
-                     << " is delayed." << endl;
-                fflush(stdout);
-                fflush(stderr);
+                cerr << "Found undispatched RT task still in RT queue"
+                     << " after arrival time!!" << endl;
+                continue; // This task is already processed. why coming here?
             }
             int id = assignNodeForRT(sensorid, cost, &imfmap);
-            if (id == -1) {
+            if (id == -1) { // Can't find a node for RT task.
+                task->cancelDelayedSubTasks(); // This is at the arrival time of the task.
                 continue;
             }
             return task->createSubTask(1, CMStatus[id]);
@@ -152,6 +152,29 @@ ITask * PrioritySimpleQ::dispatchNext() {
         }
     }
     return NULL;
+}
+
+void PrioritySimpleQ::printPower() {
+    cout << NOW << " PrioritySimpleQ: Print Power" << endl;
+    int count = 0;
+    multimap<double, int> imfmap = imfCalculator->getIMF();
+    multimap<double, int>::iterator imfit;
+    for (imfit = imfmap.begin(); imfit != imfmap.end(); imfit ++) {
+        int nodeid = imfit->second;
+        if (CMStatus[nodeid]->getTask() == NULL) {
+            cout << "#" << nodeid << ": NULL. P=" << CMStatus[nodeid]->getPower() << " ";
+        }
+        else if (CMStatus[nodeid]->getTask()->realTime) {
+            cout << "#" << nodeid << ": RT.   P=" << CMStatus[nodeid]->getPower() << " ";
+        }
+        else {
+            cout << "#" << nodeid << ": NRT.  P=" << CMStatus[nodeid]->getPower() << " ";
+        }
+        if (count % 10 == 9) {
+            cout << endl;
+        }
+        count ++;
+    }
 }
 
 int PrioritySimpleQ::assignNodeForRT(
@@ -201,6 +224,8 @@ bool PrioritySimpleQ::finishedTask(ITask * task) {
         else {
             nrtTaskQ->remove(fathertask);
         }
+        fathertask->writeOut();
+        delete fathertask;
         return true;
     }
     else {

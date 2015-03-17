@@ -5,19 +5,20 @@
  *      Author: yonggang
  */
 
+#include "iostreamer/ostreamer/Outputfile.h"
 #include "SimpleTask.h"
 #define NOW SIMTIME_DBL(simTime())
+#define BUFF_SIZE 5000
 
 int SimpleTask::rtInitId = 10000;
 
-SimpleTask::SimpleTask() {
-    subId = 0;
-    concurrency = 0;
-    outstandingSubTasks = new list<ITask *>();
+SimpleTask::SimpleTask(Outputfile * file)
+: canceledSubTasks(0), subId(0), concurrency(0),
+  outstandingSubTasks(new list<ITask *>()), outputfile(file) {
 }
 
 cObject * SimpleTask::dup() {
-    SimpleTask * task = new SimpleTask();
+    SimpleTask * task = new SimpleTask(outputfile);
     return task;
 }
 
@@ -39,6 +40,10 @@ double SimpleTask::getFinishTime() {
 
 void SimpleTask::setFinishTime(double) {
     cerr << "SimpleTask does not have setFinishTime." << endl;
+}
+
+Outputfile * SimpleTask::getTaskWriter() {
+    return outputfile;
 }
 
 // Return NULL if all dispatched.
@@ -214,12 +219,14 @@ bool SimpleTask::finished() {
     }
 }
 
+// For NRT tasks.
 bool SimpleTask::parseTaskString(string & line) {
     if (sscanf(line.c_str(), "%d %lf %d %d %lf %lf %lf %lf",
         &Id, &arrivalTime, &totalSubTasks, &sensorId,
         &inputData, &outputData, &computeCost, &maxLatency) == 8) {
         undispatchedSubTasks = totalSubTasks;
         unfinishedSubTasks = totalSubTasks;
+        canceledSubTasks = 0;
 //        printInformation();
         return true;
     } else {
@@ -227,17 +234,19 @@ bool SimpleTask::parseTaskString(string & line) {
     }
 }
 
+// For RT task.
 void SimpleTask::set(double time, int num, int sid, double cc) {
     Id = rtInitId ++;
     arrivalTime = time;
     totalSubTasks = num;
     sensorId = sid;
     computeCost = cc;
-    maxLatency = computeCost;
+    maxLatency = computeCost/num;
     inputData = 1; // temp
     outputData = 1; // temp
     undispatchedSubTasks = totalSubTasks;
     unfinishedSubTasks = totalSubTasks;
+    canceledSubTasks = 0;
 }
 
 int SimpleTask::getUnfinishedSubTasks() {
@@ -260,9 +269,56 @@ vector<pair<int, double> > SimpleTask::getSubTaskStats() {
     return subTaskStats;
 }
 
+// Return true if all finished.
+bool SimpleTask::cancelDelayedSubTasks() {
+    // undispatchedSubTasks -> finishedSubTasks.
+    canceledSubTasks = undispatchedSubTasks;
+    undispatchedSubTasks = 0;
+    unfinishedSubTasks -= canceledSubTasks;
+    if (unfinishedSubTasks == 0) {
+        return true;
+    }
+    return false;
+}
+
+int SimpleTask::getCanceledTasks() {
+    return canceledSubTasks;
+}
+
 void SimpleTask::printInformation() {
     cout << "SimpleTask, Id = " << Id <<
             ", arrivalTime = " << arrivalTime << endl;
+}
+
+void SimpleTask::writeOut() {
+    char buff[BUFF_SIZE];
+    int pos = sprintf(buff, "%d %.2lf %.2lf %.2lf %d %d",
+            Id, arrivalTime, finishTime, finishTime - arrivalTime,
+            sensorId, canceledSubTasks);
+    if (realTime) {
+        pos += sprintf(buff + pos, " R");
+    }
+    else {
+        pos += sprintf(buff + pos, " N");
+    }
+    double delay =
+        finishTime - arrivalTime - maxLatency;
+    if (delay < 0) {
+        delay = 0;
+    }
+    sprintf(buff + pos, " %.3lf", delay);
+    outputfile->writeLine(string(buff));
+    vector<pair<int, double> >::iterator it;
+    int position = sprintf(buff, "SUB ");
+    for (it = subTaskStats.begin(); it != subTaskStats.end(); it ++) {
+        position +=
+            sprintf(buff + position, "[%d]%.2lf,", it->first, it->second);
+        if (position > BUFF_SIZE) {
+            cerr << "Output buff size not enough! "
+                 << position << " > " << BUFF_SIZE << endl;
+        }
+    }
+    outputfile->writeLine(string(buff));
 }
 
 SimpleTask::~SimpleTask() {

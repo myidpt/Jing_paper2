@@ -70,8 +70,11 @@ void CM::processTask(cPacket * packet) {
     cMsgPar par = packet->par(TASK_PAR);
     ITask * task = (ITask *)(par.pointerValue());
     if (taskAtService != NULL) {
-        cout << "CM #" << myId << ": busy when received new task request id = "
-             << task->getId() << endl;
+        if (!task->realTime) {
+            cerr << "CM #" << myId << ": busy when received new NRT task id = "
+                 << task->getId() << ". Error!" << endl;
+            return;
+        }
         cancelEvent(taskAtService);
         SimpleSubTask * oldtask =
             (SimpleSubTask *)(taskAtService->par(TASK_PAR).pointerValue());

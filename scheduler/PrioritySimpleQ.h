@@ -51,6 +51,7 @@ public:
     bool newArrival(ITask * task);
     ITask * dispatchNext();
     bool finishedTask(ITask * task);
+    void printPower();
 
     virtual ~PrioritySimpleQ();
 };

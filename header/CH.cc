@@ -6,7 +6,7 @@
 #include <omnetpp.h>
 #include <list>
 #include "task/SimpleTask.h"
-#include "iostreamer/ostreamer/TaskWriter.h"
+#include "iostreamer/ostreamer/Outputfile.h"
 #include "scheduler/IQueue.h"
 #include "scheduler/SimpleQ.h"
 #include "scheduler/PrioritySimpleQ.h"
@@ -44,14 +44,18 @@ void CH::initialize()
     double maxPower = par("maxPower").doubleValue();
     algorithmName = par("algorithm").stdstringValue();
 
+    // Init task writer.
+    outputfile = new Outputfile(taskofilename);
+
     // Init taskFactory.
     if (!algorithmName.compare("Balanced") || !algorithmName.compare("Simple")) {
-        taskFactory = new TaskFactory(nrttaskifilename, ITask::SimpleTaskType);
+        taskFactory = new TaskFactory(
+                nrttaskifilename, ITask::SimpleTaskType, outputfile);
     }
     else {
         taskFactory = new TaskFactory(
                 nrttaskifilename, rttaskifilename,
-                ITask::SimpleTaskType, period);
+                ITask::SimpleTaskType, period, outputfile);
     }
 
     // Init the average workloads record.
@@ -95,9 +99,6 @@ void CH::initialize()
         queue->setCMStatus(CMStatus);
         queue->readTaskStats(rttaskifilename.c_str());
     }
-
-    // Init writers.
-    taskWriter = new TaskWriter(taskofilename);
 
     // Init print timer.
     printStatusTimer = new cPacket("PRINT_STATUS", PRINT_STATUS);
@@ -167,6 +168,10 @@ void CH::getNextTask() {
     }
 
     if (NOW >= task->getArrivalTime()) {
+        if (NOW > task->getArrivalTime()) {
+            cerr << "Error! NOW " << NOW << " > task.arrivalTime "
+                 << task->getArrivalTime() << endl;
+        }
         queue->newArrival(task);
         processTasks();
         getNextTask();
@@ -215,20 +220,13 @@ void CH::processTasks() {
 void CH::processFinishedTasks(cPacket * packet) {
     cMsgPar par = packet->par(TASK_PAR);
     ITask * task = (ITask *)(par.pointerValue());
-    SimpleTask * fathertask = (SimpleTask *)(task->getFatherTask());
 
-    if (fathertask == NULL) {
-        cerr << "Fathertask == NULL." << endl;
-        return;
-    }
 #ifdef DEBUG
     cout << NOW << " CH: finished task id = " << task->getId()
          << " from CM#" << task->getServerId() << endl;
 #endif
-    if (queue->finishedTask(task)) {
-        taskWriter->writeSimpleTask(fathertask);
-        delete fathertask;
-    }
+    queue->finishedTask(task);
+
     delete task;
     delete packet;
 
@@ -282,8 +280,8 @@ void CH::finish() {
         cancelAndDelete(selfTickChecker);
         selfTickChecker = NULL;
     }
-    if (taskWriter) {
-        delete taskWriter;
-        taskWriter = NULL;
+    if (outputfile) {
+        delete outputfile;
+        outputfile = NULL;
     }
 }
