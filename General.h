@@ -8,8 +8,8 @@
 #define DAY_NIGHT       6 // To trigger the day-night changes.
 #define TICK_CHECKER    7 // Check the CMs for enough power every small period.
 
-#define MAX_CM          1024
-#define MAX_SENSORS     4
+#define MAX_CM          2048
+#define MAX_SENSORS     16
 #define EACH_CM_GROUP   512
 
 #define ID_INDEX        1000

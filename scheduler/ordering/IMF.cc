@@ -1,38 +1,13 @@
 #include <iostream>
 #include <map>
+#include <vector>
 #include <stdio.h>
 #include "IMF.h"
+//#define DEBUG
 
 using namespace std;
 
-void IMF::printIMF(multimap<double, int> imf) {
-    multimap<double, int>::iterator imfit = imf.begin();
-    cout << "Print IMF:";
-    int i = 0;
-    for (;imfit != imf.end(); imfit ++) {
-        if (i % 10 == 0) {
-            cout << endl;
-        }
-        cout << "[" << imfit->first << "," << imfit->second << "] ";
-        i ++;
-    }
-    cout << endl;
-}
-
-IMF::IMF(int numcms, int numsensors) {
-    if (MAX_CM < numCMs) {
-        numcms = MAX_CM;
-        cerr << "MAX_CM: " << MAX_CM << " is smaller than numCM: "
-             << numCMs << endl;
-    }
-    numCMs = numcms;
-
-    if (MAX_SENSORS < numsensors) {
-        numsensors = MAX_SENSORS;
-        cerr << "MAX_SENSORS: " << MAX_SENSORS
-             << " is smaller than numSensros: " << numsensors << endl;
-    }
-    numSensors = numsensors;
+IMF::IMF(int numcms, int numsensors) :  Ordering(numcms, numsensors) {
 }
 
 void IMF::setCMPower(double p[MAX_CM]) {
@@ -143,7 +118,47 @@ multimap<double, int> IMF::getIMF() {
     for (int s = 0; s < numCMs; s ++) {
         ret.insert(pair<double, int>(imf[s], s));
     }
+
+    multimap<double, int>::iterator mit;
+#ifdef DEBUG
+    cout << "Print the IMFs:" << endl;
+    for (mit = ret.begin(); mit != ret.end(); mit ++) {
+        cout << "[" << mit->first << ", " << mit->second << "] ";
+    }
+    cout << endl;
+#endif
+
     return ret;
+}
+
+vector<int> IMF::getOrderingList() {
+    vector<int> retlist;
+
+    multimap<double, int> imfmap = getIMF();
+    multimap<double, int>::iterator imfit = imfmap.begin();
+    double oldimf = -1;
+    while (imfit != imfmap.end()) {
+        multimap<double, int> pmap; // map only according to power.
+        while (true) {
+            if (imfit == imfmap.end() || (oldimf >= 0 && imfit->first != oldimf)) {
+                // Fill retlist with nodes power from high to low.
+                multimap<double, int>::reverse_iterator pit = pmap.rbegin();
+                for (; pit != pmap.rend(); pit ++) {
+                    retlist.push_back(pit->second);
+                }
+                oldimf = imfit->first;
+                break;
+            }
+            int node = imfit->second;
+            pmap.insert(pair<double, int>(CMPower[node], node));
+            oldimf = imfit->first;
+            imfit ++;
+        }
+    }
+#ifdef DEBUG
+        printOrdering(retlist);
+#endif
+    return retlist;
 }
 
 IMF::~IMF() {

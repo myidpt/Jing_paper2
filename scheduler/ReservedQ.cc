@@ -6,9 +6,10 @@
  */
 
 #include <iostream>
-#include <map>
+#include <vector>
 #include "Inputfile.h"
 #include "ReservedQ.h"
+#include "scheduler/ordering/IMF.h"
 #define NOW SIMTIME_DBL(simTime())
 
 using namespace std;
@@ -169,10 +170,10 @@ ITask * ReservedQ::dispatchNext() {
         }
 
         // For the NRT tasks, iterate with IMF from low to high.
-        multimap<double, int> imfmap = imfCalculator->getIMF();
-        multimap<double, int>::iterator imfit;
-        for (imfit = imfmap.begin(); imfit != imfmap.end(); imfit ++) {
-            int nodeid = imfit->second;
+        vector<int> imf = imfCalculator->getOrderingList();
+        vector<int>::iterator imfit;
+        for (imfit = imf.begin(); imfit != imf.end(); imfit ++) {
+            int nodeid = *imfit;
             if (CMStatus[nodeid]->isAvailable()
                 && CMStatus[nodeid]->hasSensor(sensorid)
                 && !rtReserv->findViolationForNode(

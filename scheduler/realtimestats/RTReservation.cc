@@ -7,12 +7,13 @@
 
 #include <stdio.h>
 #include <assert.h>
-#include <map>
+#include <vector>
 #include "Inputfile.h"
 #include "RTReservation.h"
 #include "SimpleTask.h"
 #include "status/SimpleStatus.h"
-#include "scheduler/imf/IMF.h"
+#include "scheduler/ordering/IMF.h"
+//#define DEBUG
 
 using namespace std;
 
@@ -20,7 +21,7 @@ RTReservation::RTReservation(int numcms, int numsensors, int p, double cr)
 : numCMs(numcms), numSensors(numsensors), period(p), chargeRate(cr) {
     imfCalculator = new IMF(numcms, numsensors);
     for (int i = 0; i < numCMs; i ++) {
-        startPThresholds[i] = 0;
+        startPThresholds[i] = 0; // Note: Must be 0.
     }
 }
 
@@ -42,9 +43,11 @@ bool RTReservation::powerAchievable(double time, double power) {
 bool RTReservation::wrapPThreshold(
         int nodeid, double task_time, double task_span, double task_th,
         double gap, RTReservation::PThresholds ** pths) {
+#ifdef DEBUG
     cout << "Wrap " << nodeid << "," << task_time << "," << task_th
          << "," << gap << endl;
     fflush(stdout);
+#endif
     if (gap > initialPower[nodeid]) {
         return false;
     }
@@ -82,7 +85,9 @@ bool RTReservation::wrapPThreshold(
             new_pths->insert(pair<double, PThreshold *>(cur_time, new_pth));
             it ++;
         }
+#ifdef DEBUG
         cout << cur_time << " " << cur_th << " " << cur_span << endl;
+#endif
 
         double cur_end_time = cur_time + cur_span;
         double idle_charge = 0;
@@ -96,17 +101,20 @@ bool RTReservation::wrapPThreshold(
         }
         // extra_charge is the extra charge not required by last_th.
         double extra_charge = idle_charge - last_th;
+#ifdef DEBUG
         cout << "ext_ch=" << extra_charge << "," << idle_charge << ","
              << last_th << endl;
+#endif
         if (extra_charge + 0.00001 > 0) {
             gap -= extra_charge;
             if (gap - 0.00001 < 0) {
                 gap = 0;
             }
         }
-
+#ifdef DEBUG
         cout << "gap=" << gap << endl;
         fflush(stdout);
+#endif
         last_time = cur_time;
         last_th = cur_th;
     }
@@ -114,17 +122,21 @@ bool RTReservation::wrapPThreshold(
         *pths = new_pths;
         delete old_pths;
         startPThresholds[nodeid] += gap;
+#ifdef DEBUG
         cout << "Wrap out true." << endl;
         for (PThresholds::iterator nit = (*pths)->begin(); nit != (*pths)->end(); nit ++) {
             cout << nit->first << " " << nit->second->first << " "
                  << nit->second->second << endl;
         }
         fflush(stdout);
+#endif
         return true;
     }
     else {
+#ifdef DEBUG
         cout << "Wrap out false." << endl;
         fflush(stdout);
+#endif
         return false;
     }
 }
@@ -252,9 +264,9 @@ void RTReservation::makeReservation(const char  * filename) {
         imfCalculator->setCMPower(power);
         imfCalculator->setWorkloads(workloads);
 
-        multimap<double, int> imf = imfCalculator->getIMF(); // Ranked imf.
+        vector<int> imf = imfCalculator->getOrderingList(); // Ranked imf.
         // From smallest to largest.
-        multimap<double, int>::iterator imfit = imf.begin();
+        vector<int>::iterator imfit = imf.begin();
         for (int subtask = 0; subtask < task_scale;) {
             // For the subtasks.
             if (imfit == imf.end()) {
@@ -262,7 +274,7 @@ void RTReservation::makeReservation(const char  * filename) {
                 printReservation();
                 return;
             }
-            int nodeid = imfit->second;
+            int nodeid = *imfit;
 
             if (!CMSensors[nodeid][task_type]) { // The node does not have the sensor.
                 imfit ++;
@@ -275,6 +287,7 @@ void RTReservation::makeReservation(const char  * filename) {
                      << " in nodesPThresholds." << endl;
                 return;
             }
+
             PThresholds * eth = nodeit->second;
             double th_time = period; // The time for the threshold.
             double th_th = 0; // The power threshold.
@@ -291,6 +304,7 @@ void RTReservation::makeReservation(const char  * filename) {
             double new_th = constructPThreshold(
                     nodeid, task_time, task_span, th_time, th_th,
                     &(nodeit->second));
+            cout << "Node#" << nodeid << " new_th=" << new_th << endl;
             if (new_th >= 0) { // This means the subtask can be assigned here.
                 nodeit->second->insert(pair<double, PThreshold *>(
                         task_time, new PThreshold(new_th, task_span)));
@@ -318,7 +332,7 @@ void RTReservation::makeReservation(const char  * filename) {
 
 void RTReservation::printReservation() {
     map<int, PThresholds *>::iterator itet = nodesPThresholds->begin();
-    cout << "Node PThresholds:" << endl;
+    cout << "Node PThresholds [s_time, s_threshold, duration]:" << endl;
     for (; itet != nodesPThresholds->end(); itet ++) {
         cout << "Node#" << itet->first << ": ";
         PThresholds * pths = itet->second;

@@ -12,7 +12,7 @@
 #include <set>
 #include "General.h"
 #include "status/SimpleStatus.h"
-#include "scheduler/imf/IMF.h"
+#include "scheduler/ordering/Ordering.h"
 
 using namespace std;
 
@@ -47,7 +47,7 @@ protected:
     int rtNodeAssignIndex[MAX_SENSORS];
     int rtNodeNum[MAX_SENSORS];
 
-    IMF * imfCalculator;
+    Ordering * imfCalculator;
 
     inline bool powerAchievable(double time, double power);
     inline bool wrapPThreshold(int nodeid, double task_time, double task_span,

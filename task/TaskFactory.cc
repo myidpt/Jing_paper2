@@ -129,9 +129,12 @@ bool TaskFactory::getInitialAverageWorkloads(double workloads[]) {
     if (! initialAverageWorkloadsAvailable) {
         return false;
     }
+    cout << "Initial average workloads:" << endl;
     for (int i = 0; i < MAX_SENSORS; i ++) {
         workloads[i] = initialAverageWorkloads[i];
+        cout << initialAverageWorkloads[i] << ", ";
     }
+    cout << endl;
     return true;
 }
 

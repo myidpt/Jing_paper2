@@ -1,6 +1,6 @@
 /*
  * PrioritySimpleQ.h
- *
+ *  IMF
  *  Created on: Apr 23, 2013
  *      Author: yonggang
  */
@@ -15,7 +15,7 @@
 #include <omnetpp.h>
 #include "General.h"
 #include "scheduler/IQueue.h"
-#include "scheduler/imf/IMF.h"
+#include "scheduler/ordering/IMF.h"
 #include "status/IStatus.h"
 #include "task/ITask.h"
 #include "task/SimpleTask.h"
@@ -32,12 +32,12 @@ protected:
     double averageWorkloads[MAX_SENSORS];
     list<ITask *> * rtTaskQ;
     list<ITask *> * nrtTaskQ;
-    IMF * imfCalculator;
+    Ordering * imfCalculator;
 
-    int assignNodeForRT(int sid, double cost, multimap<double, int> * imfmap);
+    int assignNodeForRT(int sid, double cost, vector<int> * imf);
 
 public:
-    PrioritySimpleQ(int, int);
+    PrioritySimpleQ(int, int, Ordering *);
 
     bool setNumCMs(int);
     bool setNumSensors(int);

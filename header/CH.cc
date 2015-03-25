@@ -12,6 +12,8 @@
 #include "scheduler/PrioritySimpleQ.h"
 #include "scheduler/BalancedQ.h"
 #include "scheduler/ReservedQ.h"
+#include "scheduler/ordering/IMF.h"
+#include "scheduler/ordering/Random.h"
 #include "CH.h"
 
 Define_Module(CH);
@@ -48,7 +50,7 @@ void CH::initialize()
     outputfile = new Outputfile(taskofilename);
 
     // Init taskFactory.
-    if (!algorithmName.compare("Balanced") || !algorithmName.compare("Simple")) {
+    if (!algorithmName.compare("Balanced")) {
         taskFactory = new TaskFactory(
                 nrttaskifilename, ITask::SimpleTaskType, outputfile);
     }
@@ -75,24 +77,28 @@ void CH::initialize()
 
     // Init the queue.
     if (!algorithmName.compare("Balanced")) {
+        cout << "Balanced Queue" << endl;
         queue = new BalancedQ(numCMs, numSensors);
         queue->setAverageWorkloads(averageWorkloads);
         queue->setCMSensors(CMSensors);
         queue->setCMStatus(CMStatus);
     }
     else if (!algorithmName.compare("Simple")) {
-        queue = new SimpleQ(numCMs, numSensors);
+        cout << "Simple Queue" << endl;
+        queue = new PrioritySimpleQ(numCMs, numSensors, new Random(numCMs, numSensors));
         queue->setAverageWorkloads(averageWorkloads);
         queue->setCMSensors(CMSensors);
         queue->setCMStatus(CMStatus);
     }
     else if (!algorithmName.compare("PrioritySimple")) {
-        queue = new PrioritySimpleQ(numCMs, numSensors);
+        cout << "PrioritySimple Queue" << endl;
+        queue = new PrioritySimpleQ(numCMs, numSensors, new IMF(numCMs, numSensors));
         queue->setAverageWorkloads(averageWorkloads);
         queue->setCMSensors(CMSensors);
         queue->setCMStatus(CMStatus);
     }
     else if (!algorithmName.compare("Reserved")) {
+        cout << "Reserved Queue" << endl;
         queue = new ReservedQ(numCMs, numSensors, period, chargeRate);
         queue->setAverageWorkloads(averageWorkloads);
         queue->setCMSensors(CMSensors);

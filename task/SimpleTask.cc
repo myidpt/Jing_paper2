@@ -226,6 +226,7 @@ bool SimpleTask::parseTaskString(string & line) {
         &inputData, &outputData, &computeCost, &maxLatency) == 8) {
         undispatchedSubTasks = totalSubTasks;
         unfinishedSubTasks = totalSubTasks;
+        finishTime = arrivalTime;
         canceledSubTasks = 0;
 //        printInformation();
         return true;
@@ -238,6 +239,7 @@ bool SimpleTask::parseTaskString(string & line) {
 void SimpleTask::set(double time, int num, int sid, double cc) {
     Id = rtInitId ++;
     arrivalTime = time;
+    finishTime = arrivalTime;
     totalSubTasks = num;
     sensorId = sid;
     computeCost = cc;

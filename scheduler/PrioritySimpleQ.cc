@@ -9,23 +9,25 @@
 #include <map>
 #include "Inputfile.h"
 #include "PrioritySimpleQ.h"
+#include "scheduler/ordering/Ordering.h"
 #define NOW SIMTIME_DBL(simTime())
+//#define DEBUG
 
 using namespace std;
 
-PrioritySimpleQ::PrioritySimpleQ(int numcms, int numsensors) {
+PrioritySimpleQ::PrioritySimpleQ(int numcms, int numsensors, Ordering * order) {
     // Init the queue.
     rtTaskQ = new list<ITask *>();
     nrtTaskQ = new list<ITask *>();
 
     setNumCMs(numcms);
     setNumSensors(numsensors);
-    imfCalculator = new IMF(numcms, numsensors);
+    imfCalculator = order;
 }
 
 bool PrioritySimpleQ::setNumCMs(int numcms) {
     if (MAX_CM < numcms) {
-        cerr << "MAX_CM: " << MAX_CM << " is smaller than numCM: "
+        cerr << "PrioritySimpleQ: MAX_CM: " << MAX_CM << " is smaller than numCM: "
              << numcms << endl;
         return false;
     }
@@ -89,7 +91,7 @@ bool PrioritySimpleQ::newArrival(ITask * itask) {
 }
 
 ITask * PrioritySimpleQ::dispatchNext() {
-    // Set the new power of each CM for the IMF calculator.
+    // Set the new power of each CM for the imfcalculator.
     double power[MAX_CM];
     for (int i = 0; i < numCMs; i ++) {
         power[i] = CMStatus[i]->getPower();
@@ -99,7 +101,8 @@ ITask * PrioritySimpleQ::dispatchNext() {
     list<ITask *>::iterator it;
     // In the following loop, we iterate rtTaskQ first, then nrtTaskQ.
     bool isRealtime = true;
-    for (it = rtTaskQ->begin(); it != nrtTaskQ->end(); it ++) {
+    it = rtTaskQ->begin();
+    while (it != nrtTaskQ->end()) {
         if (it == rtTaskQ->end()) {
             it = nrtTaskQ->begin();
             isRealtime = false;
@@ -109,6 +112,7 @@ ITask * PrioritySimpleQ::dispatchNext() {
         }
         SimpleTask * task = (SimpleTask *)(*it);
         if (task->dispatched()) {
+            it ++;
             continue;
         }
         int sensorid = task->getSensorId();
@@ -116,23 +120,31 @@ ITask * PrioritySimpleQ::dispatchNext() {
         // Get the required sensor ID of the task.
 
         if (task->getRemainingCost() == 0) {
+            it ++;
             continue; // No need to dispatch.
         }
 
         // For both RT & NRT tasks, iterate with IMF from low to high.
-        multimap<double, int> imfmap = imfCalculator->getIMF();
-        multimap<double, int>::iterator imfit;
+        vector<int> imf = imfCalculator->getOrderingList();
+        vector<int>::iterator imfit;
 
         // For the RT tasks.
         if (isRealtime) {
             if (NOW != task->getArrivalTime()) {
                 cerr << "Found undispatched RT task still in RT queue"
                      << " after arrival time!!" << endl;
+                it ++;
                 continue; // This task is already processed. why coming here?
             }
-            int id = assignNodeForRT(sensorid, cost, &imfmap);
+            int id = assignNodeForRT(sensorid, cost, &imf);
+#ifdef DEBUG
+            cout << "assigned task " << task->getId() << "'s subtask to " << id << endl;
+#endif
             if (id == -1) { // Can't find a node for RT task.
-                task->cancelDelayedSubTasks(); // This is at the arrival time of the task.
+                if (task->cancelDelayedSubTasks()) { // No subtask can be dispatched :(
+                    it = rtTaskQ->erase(it); // Returns next element.
+                    task->writeOut();
+                }
                 continue;
             }
             return task->createSubTask(1, CMStatus[id]);
@@ -140,8 +152,8 @@ ITask * PrioritySimpleQ::dispatchNext() {
         }
 
         // For the NRT tasks.
-        for (imfit = imfmap.begin(); imfit != imfmap.end(); imfit ++) {
-            int nodeid = imfit->second;
+        for (imfit = imf.begin(); imfit != imf.end(); imfit ++) {
+            int nodeid = *imfit;
             if (CMStatus[nodeid]->isAvailable()
                 && CMStatus[nodeid]->hasSensor(sensorid)
                 && CMStatus[nodeid]->hasPowerToRun(sensorid, cost)) {
@@ -150,6 +162,7 @@ ITask * PrioritySimpleQ::dispatchNext() {
                 return task->createSubTask(1, CMStatus[nodeid]);
             }
         }
+        it ++;
     }
     return NULL;
 }
@@ -157,10 +170,10 @@ ITask * PrioritySimpleQ::dispatchNext() {
 void PrioritySimpleQ::printPower() {
     cout << NOW << " PrioritySimpleQ: Print Power" << endl;
     int count = 0;
-    multimap<double, int> imfmap = imfCalculator->getIMF();
-    multimap<double, int>::iterator imfit;
-    for (imfit = imfmap.begin(); imfit != imfmap.end(); imfit ++) {
-        int nodeid = imfit->second;
+    vector<int> imf = imfCalculator->getOrderingList();
+    vector<int>::iterator imfit;
+    for (imfit = imf.begin(); imfit != imf.end(); imfit ++) {
+        int nodeid = *imfit;
         if (CMStatus[nodeid]->getTask() == NULL) {
             cout << "#" << nodeid << ": NULL. P=" << CMStatus[nodeid]->getPower() << " ";
         }
@@ -178,33 +191,56 @@ void PrioritySimpleQ::printPower() {
 }
 
 int PrioritySimpleQ::assignNodeForRT(
-    int sid, double cost, multimap<double, int> * imfmap) {
+    int sid, double cost, vector<int> * imf) {
+#ifdef DEBUG
+    cout << "assignNodeForRT: " << sid << "   ";
+#endif
     // First find the idle nodes
     // (ones that finish at the time but are later in the queue).
-    multimap<double, int>::iterator imfit;
-    for (imfit = imfmap->begin(); imfit != imfmap->end(); imfit ++) {
-        int nodeid = imfit->second;
+    vector<int>::iterator imfit;
+    for (imfit = imf->begin(); imfit != imf->end(); imfit ++) {
+        int nodeid = *imfit;
         if (CMStatus[nodeid]->hasSensor(sid)
             && CMStatus[nodeid]->isAvailable()
             && CMStatus[nodeid]->hasPowerToRun(sid, cost)) {
+#ifdef DEBUG
+            cout << "Picked node #" << nodeid << endl;
+#endif
             return nodeid;
         }
     }
 
     // Second interrupt the nodes with NRT tasks.
-    for (imfit = imfmap->begin(); imfit != imfmap->end(); imfit ++) {
-        int nodeid = imfit->second;
-        if (CMStatus[nodeid]->hasSensor(sid)
-            && CMStatus[nodeid]->hasPowerToRun(sid, cost)
-            && CMStatus[nodeid]->getTask() != NULL) {
-            SimpleSubTask * curtask =
-                (SimpleSubTask *)(CMStatus[nodeid]->getTask());
-            if (!curtask->realTime) {
-                // Revert the subtask in father task.
-                ((SimpleTask *)curtask->getFatherTask())->
-                    revertSubTask(curtask);
-                return nodeid;
-            }
+    for (imfit = imf->begin(); imfit != imf->end(); imfit ++) {
+        int nodeid = *imfit;
+
+        if (! CMStatus[nodeid]->hasSensor(sid)) {
+#ifdef DEBUG
+            cout << "Node#" << nodeid << " dones't have sensor: " << sid << endl;
+#endif
+            continue;
+        }
+
+        if (! CMStatus[nodeid]->hasPowerToRun(sid, cost)) {
+#ifdef DEBUG
+            cout << nodeid << " dones't have power to run: "
+                 << CMStatus[nodeid]->getPower() << endl;
+#endif
+            continue;
+        }
+
+        if (CMStatus[nodeid]->getTask() == NULL ) {
+            cerr << "Error: assignNodeForRT, node should be assigned"
+                 << " in previous loop" << endl;
+            continue;
+        }
+
+        SimpleSubTask * curtask = (SimpleSubTask *)(CMStatus[nodeid]->getTask());
+        if (!curtask->realTime) {
+            // Revert the subtask in father task.
+            ((SimpleTask *)curtask->getFatherTask())->
+                revertSubTask(curtask);
+            return nodeid;
         }
     }
 

@@ -135,6 +135,8 @@ bool SimpleQ::finishedTask(ITask * task) {
     }
     if (fathertask->setFinishedSubTask(task)) { // Remove the father task from queue.
         taskQ->remove(fathertask);
+        fathertask->writeOut();
+        delete fathertask;
         return true;
     }
     else {

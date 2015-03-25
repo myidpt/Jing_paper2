@@ -1,6 +1,6 @@
 /*
  * BalancedQ.cc
- *
+ *  Old IMF.
  *  Created on: Apr 23, 2013
  *      Author: yonggang
  */

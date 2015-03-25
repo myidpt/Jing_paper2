@@ -1,6 +1,6 @@
 /*
  * ReservedQ.h
- *
+ *  IMF + reservations for RT tasks.
  *  Created on: Apr 23, 2013
  *      Author: yonggang
  */
@@ -16,7 +16,7 @@
 #include "General.h"
 #include "scheduler/realtimestats/RTReservation.h"
 #include "scheduler/IQueue.h"
-#include "scheduler/imf/IMF.h"
+#include "scheduler/ordering/IMF.h"
 #include "status/IStatus.h"
 #include "task/ITask.h"
 #include "task/SimpleTask.h"
@@ -38,7 +38,7 @@ protected:
     double period;
     double chargeRate;
 
-    IMF * imfCalculator;
+    Ordering * imfCalculator;
 
 public:
     ReservedQ(int, int, double, double);

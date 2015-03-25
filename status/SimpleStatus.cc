@@ -94,26 +94,22 @@ void SimpleStatus::updatePower(double now) {
         if(n_offset <= period/2) {
             if(l_offset > n_offset) { // l_offset is at night.
                 power -= night_dis_rate * (period - l_offset);
-                CHECK_POWER(myId)
                 power -= day_dis_rate * n_offset;
-                CHECK_POWER(myId)
             }
             else {
                 power -= day_dis_rate * (n_offset - l_offset);
-                CHECK_POWER(myId)
             }
+            CHECK_POWER(myId)
         }
         else {
             if(l_offset < period/2) {
                 power -= day_dis_rate * (period/2 - l_offset);
-                CHECK_POWER(myId)
                 power -= night_dis_rate * (n_offset - period/2);
-                CHECK_POWER(myId)
             }
             else {
                 power -= night_dis_rate * (n_offset - l_offset);
-                CHECK_POWER(myId)
             }
+            CHECK_POWER(myId)
         }
     }
     lastPowerUpdateTime = now;

@@ -22,25 +22,26 @@
 #define IMF_H_
 
 #include <map>
+#include <vector>
+#include "Ordering.h"
 #include "General.h"
 
 using namespace std;
 
-class IMF {
+class IMF : public Ordering {
 protected:
-    int numCMs;
-    int numSensors;
-    double CMPower[MAX_CM];
     bool CMSensors[MAX_CM][MAX_SENSORS];
+    double CMPower[MAX_CM];
     double workloads[MAX_SENSORS];
+
+    multimap<double, int> getIMF(); // Get IMF, not considering power.
 public:
-    static void printIMF(multimap<double, int> imf);
     IMF(int numcms, int numsensors);
     // You need to set power, sensors and workload to get PWR.
     void setCMPower(double p[MAX_CM]);
     void setCMSensors(bool sensors[MAX_CM][MAX_SENSORS]);
     void setWorkloads(double workloads[MAX_SENSORS]);
-    multimap<double, int> getIMF();
+    vector<int> getOrderingList(); // Get IMF list, considering power.
     virtual ~IMF();
 };
 
